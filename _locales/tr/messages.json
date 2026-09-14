@@ -1,0 +1,10 @@
+{
+  "extName":        { "message": "Contact Sheet" },
+  "extDescription": { "message": "Seçtiğin oynatma listelerindeki videoları YouTube ana sayfasından gizler." },
+  "popupTitle":     { "message": "Ana sayfada gizlenenler" },
+  "popupEmpty":     { "message": "Henüz liste okunmadı. YouTube'u aç, listelerini buradan getirelim." },
+  "popupNoTab":     { "message": "Senkronizasyon için açık bir YouTube sekmesi gerekiyor." },
+  "popupError":     { "message": "Listeler alınamadı. YouTube yanıtı beklenenden farklı. Tekrar dene." },
+  "actionRefresh":  { "message": "Yenile" },
+  "actionRefreshing": { "message": "Yenileniyor" }
+}

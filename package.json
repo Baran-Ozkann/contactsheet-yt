@@ -1,0 +1,31 @@
+{
+  "name": "contactsheet-yt",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Hide videos from selected YouTube playlists on the YouTube homepage.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "build:prod": "node build.mjs --prod",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check": "npm run typecheck && npm run lint && npm run test && npm run build",
+    "zip": "node build.mjs --prod --zip"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/chrome": "0.2.9",
+    "esbuild": "0.28.2",
+    "eslint": "10.10.0",
+    "globals": "17.12.0",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.70.0",
+    "vitest": "5.0.0"
+  }
+}

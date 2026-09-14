@@ -1,0 +1,26 @@
+/* Design tokens from spec §6.2. The full contact-sheet interface is Phase 5;
+   this file only carries the palette forward so nothing gets re-invented. */
+:root {
+  --film: #2b2f27;
+  --frame: #343a31;
+  --emulsion: #d6d2c4;
+  --latent: #8e9184;
+  --grease: #d0342c;
+  --safelight: #e8a33d;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  width: 380px;
+  min-height: 220px;
+  margin: 0;
+  padding: 18px 20px;
+  background: var(--film);
+  color: var(--emulsion);
+  font: 400 14px/1.45 system-ui, sans-serif;
+}
+
+h1 { margin: 0 0 10px; font-size: 17px; letter-spacing: -0.01em; }
+#status { margin: 0; color: var(--latent); }
+.note { margin: 24px 0 0; color: var(--latent); font-size: 12px; }

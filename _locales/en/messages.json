@@ -1,0 +1,10 @@
+{
+  "extName":        { "message": "Contact Sheet" },
+  "extDescription": { "message": "Hides videos from playlists you choose on the YouTube homepage." },
+  "popupTitle":     { "message": "Hidden from your homepage" },
+  "popupEmpty":     { "message": "No playlists read yet. Open YouTube and we'll fetch your lists." },
+  "popupNoTab":     { "message": "Syncing needs an open YouTube tab." },
+  "popupError":     { "message": "Couldn't fetch your playlists. YouTube's response looked different. Try again." },
+  "actionRefresh":  { "message": "Refresh" },
+  "actionRefreshing": { "message": "Refreshing" }
+}

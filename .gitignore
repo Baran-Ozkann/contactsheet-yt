@@ -1,0 +1,11 @@
+node_modules/
+dist/
+dist-zip/
+*.local.json
+.env
+.env.*
+fixtures/raw/
+docs/spike/*-output.txt
+.DS_Store
+Thumbs.db
+*.log
