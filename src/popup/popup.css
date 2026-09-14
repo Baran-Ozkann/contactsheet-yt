@@ -191,6 +191,9 @@ h1 {
   text-align: left;
   cursor: pointer;
   position: relative;
+  /* Structural guarantee that the cross can never reach a neighbouring row,
+     whatever its geometry ends up being. */
+  overflow: hidden;
 }
 
 /* Film frame numbering — legitimate because the content really is an ordered
@@ -221,25 +224,37 @@ h1 {
   color: var(--latent);
   font: 400 11px/1.4 var(--condensed);
   font-variant-numeric: tabular-nums;
+  /* A long id or title must clip, never widen the row (item 5). */
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .row[aria-checked='true'] .row-count {
   color: var(--grease);
 }
 
-/* The grease-pencil cross, drawn over the whole frame. */
+/* The grease-pencil cross. Redaction means striking through, not erasing: this
+   is a mark laid over the type, so the title has to stay readable underneath. */
 .cross {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  /* Sits inside the row's padding, so the stroke never reaches the frame edge
+     and the two strokes read as one deliberate mark rather than a full bleed. */
+  inset: 7px 14px;
   pointer-events: none;
 }
 
 .cross path {
   stroke: var(--grease);
-  stroke-width: 2.25;
+  /* non-scaling-stroke is what keeps this honest. The viewBox is stretched
+     roughly 3.8x horizontally against 1.1x vertically, so a scaled stroke
+     rendered several times its nominal width and the round caps pushed past
+     the edges. This pins the width to real pixels at any row size. */
+  vector-effect: non-scaling-stroke;
+  stroke-width: 1.5;
   stroke-linecap: round;
+  stroke-opacity: 0.9;
   fill: none;
   stroke-dasharray: 1;
   stroke-dashoffset: 1;
