@@ -1,6 +1,7 @@
 import {
   DEFAULT_SETTINGS,
   MIN_SYNC_INTERVAL_MINUTES,
+  defaultSettings,
   isPlaylistId,
   type PlaylistSetting,
   type Settings,
@@ -24,7 +25,7 @@ function isFiniteNumber(value: unknown): value is number {
  * script and never leave hiding half-configured (spec NFR-04).
  */
 export function coerceSettings(raw: unknown): Settings {
-  if (typeof raw !== 'object' || raw === null) return { ...DEFAULT_SETTINGS };
+  if (typeof raw !== 'object' || raw === null) return defaultSettings();
   const input = raw as Partial<Settings>;
 
   // Accumulate on a null-prototype object: "__proto__" and "constructor" both
@@ -65,7 +66,7 @@ export async function readSettings(): Promise<Settings> {
     return coerceSettings(stored[KEY]);
   } catch (err) {
     log.error('settings read failed, using defaults', err);
-    return { ...DEFAULT_SETTINGS };
+    return defaultSettings();
   }
 }
 
