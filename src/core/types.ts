@@ -29,13 +29,32 @@ export interface Settings {
   playlists: Record<PlaylistId, PlaylistSetting>;
 }
 
-export const DEFAULT_SETTINGS: Settings = {
+/**
+ * Frozen on purpose. A spread of this object is shallow, so the `playlists` map
+ * would be shared with every caller that fell back to defaults — one mutation
+ * and the "safe default" permanently carries someone else's data. Freezing
+ * turns that mistake into a throw instead of silent corruption.
+ *
+ * Use `defaultSettings()` whenever you need a value you intend to modify.
+ */
+export const DEFAULT_SETTINGS: Settings = Object.freeze({
   schemaVersion: 1,
   enabled: true,
   debugOverlay: false,
   syncIntervalMinutes: 360,
-  playlists: {},
-};
+  playlists: Object.freeze({}) as Record<PlaylistId, PlaylistSetting>,
+}) as Settings;
+
+/** A fresh, fully mutable copy of the defaults. */
+export function defaultSettings(): Settings {
+  return {
+    schemaVersion: 1,
+    enabled: true,
+    debugOverlay: false,
+    syncIntervalMinutes: 360,
+    playlists: {},
+  };
+}
 
 export const MIN_SYNC_INTERVAL_MINUTES = 30;
 

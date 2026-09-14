@@ -1,26 +1,362 @@
-/* Design tokens from spec §6.2. The full contact-sheet interface is Phase 5;
-   this file only carries the palette forward so nothing gets re-invented. */
+/* The contact-sheet interface. Spec §6 is binding — this implements it rather
+   than reinterpreting it. */
+
+/* Archivo, local only. The Google Fonts CDN is forbidden (spec §6.3, §7 rule 1).
+   If the .woff2 files are absent the stack below falls back cleanly; see
+   src/assets/fonts/README.md. */
+@font-face {
+  font-family: 'Archivo';
+  src: url('../assets/fonts/Archivo-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Archivo';
+  src: url('../assets/fonts/Archivo-SemiBold.woff2') format('woff2');
+  font-weight: 600;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Archivo Condensed';
+  src: url('../assets/fonts/ArchivoCondensed-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+}
+
 :root {
+  /* Spec §6.2 */
   --film: #2b2f27;
   --frame: #343a31;
   --emulsion: #d6d2c4;
-  --latent: #8e9184;
+  /* Spec's #8E9184 measures 3.64:1 on --frame, short of the 4.5:1 §6.7
+     requires. §6.7 says to verify and adjust the token, so this is the minimal
+     hue-preserving lift: 4.59:1 on --frame, 5.35:1 on --film. */
+  --latent: #a0a495;
   --grease: #d0342c;
   --safelight: #e8a33d;
+
+  --sprocket-width: 16px;
+  --stroke-ms: 180ms;
+  --stroke-ease: cubic-bezier(0.2, 0.7, 0.3, 1);
+
+  --body: 'Archivo', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --condensed: 'Archivo Condensed', 'Archivo Narrow', system-ui, sans-serif;
 }
 
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
 
 body {
   width: 380px;
-  min-height: 220px;
+  height: 520px;
   margin: 0;
-  padding: 18px 20px;
+  display: grid;
+  grid-template-columns: var(--sprocket-width) 1fr;
   background: var(--film);
   color: var(--emulsion);
-  font: 400 14px/1.45 system-ui, sans-serif;
+  font: 400 14px/1.45 var(--body);
+  overflow: hidden;
 }
 
-h1 { margin: 0 0 10px; font-size: 17px; letter-spacing: -0.01em; }
-#status { margin: 0; color: var(--latent); }
-.note { margin: 24px 0 0; color: var(--latent); font-size: 12px; }
+/* ---- sprocket strip: the one decorative element (spec §6.4) ---------------- */
+
+.sprocket {
+  display: block;
+  width: var(--sprocket-width);
+  height: 100%;
+}
+
+.sprocket rect {
+  fill: var(--emulsion);
+  opacity: 0.55;
+}
+
+/* During a sync the holes light amber one after another, 2s loop. There is no
+   other spinner (spec §6.5). Amber means process; it is never used elsewhere. */
+body.is-syncing .sprocket rect {
+  animation: sprocket-run 2s linear infinite;
+}
+
+@keyframes sprocket-run {
+  0%,
+  40%,
+  100% {
+    fill: var(--emulsion);
+    opacity: 0.55;
+  }
+  15% {
+    fill: var(--safelight);
+    opacity: 1;
+  }
+}
+
+/* ---- strip ---------------------------------------------------------------- */
+
+.strip {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  height: 520px;
+}
+
+/* Frames are separated by a 2px gap in --film, not a hairline rule (§6.4). */
+.head,
+.row,
+.foot {
+  background: var(--frame);
+  margin-bottom: 2px;
+}
+
+.head {
+  padding: 14px 16px 12px;
+}
+
+.head-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+h1 {
+  margin: 0;
+  font: 600 17px/1.2 var(--body);
+  letter-spacing: -0.01em;
+}
+
+.subtitle {
+  margin: 6px 0 0;
+  color: var(--latent);
+  font: 400 11px/1.4 var(--condensed);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- master toggle -------------------------------------------------------- */
+
+.master {
+  flex: none;
+  width: 44px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--latent);
+  border-radius: 11px;
+  background: transparent;
+  cursor: pointer;
+  position: relative;
+}
+
+.master::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--latent);
+  transition: transform 140ms var(--stroke-ease), background-color 140ms linear;
+}
+
+.master[aria-checked='true'] {
+  border-color: var(--emulsion);
+}
+
+.master[aria-checked='true']::after {
+  background: var(--emulsion);
+  transform: translateX(22px);
+}
+
+/* ---- rows ----------------------------------------------------------------- */
+
+.rows {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 28px 1fr auto;
+  align-items: baseline;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 16px;
+  border: 0;
+  background: var(--frame);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  position: relative;
+}
+
+/* Film frame numbering — legitimate because the content really is an ordered
+   strip (spec §6.4). */
+.row-no,
+.row-count {
+  color: var(--latent);
+  font: 400 11px/1.4 var(--condensed);
+  font-variant-numeric: tabular-nums;
+}
+
+.row-count {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.row-title {
+  font: 500 15px/1.25 var(--body);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row-note {
+  grid-column: 2 / -1;
+  margin-top: 4px;
+  color: var(--latent);
+  font: 400 11px/1.4 var(--condensed);
+  font-variant-numeric: tabular-nums;
+}
+
+.row[aria-checked='true'] .row-count {
+  color: var(--grease);
+}
+
+/* The grease-pencil cross, drawn over the whole frame. */
+.cross {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.cross path {
+  stroke: var(--grease);
+  stroke-width: 2.25;
+  stroke-linecap: round;
+  fill: none;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  /* Reversing the same animation is what "toggling off" means (spec §6.5). */
+  transition: stroke-dashoffset var(--stroke-ms) var(--stroke-ease);
+}
+
+.cross path:nth-child(2) {
+  transition-delay: 60ms;
+}
+
+.row[aria-checked='true'] .cross path {
+  stroke-dashoffset: 0;
+}
+
+/* ---- manual entry (FR-11) ------------------------------------------------- */
+
+.add {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  background: var(--frame);
+  margin-bottom: 2px;
+}
+
+.add input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 7px 9px;
+  border: 1px solid var(--latent);
+  background: var(--film);
+  color: var(--emulsion);
+  font: 400 13px/1.3 var(--body);
+}
+
+.add input::placeholder {
+  color: var(--latent);
+}
+
+.btn {
+  padding: 7px 12px;
+  border: 1px solid var(--latent);
+  background: transparent;
+  color: var(--emulsion);
+  font: 500 13px/1.3 var(--body);
+  cursor: pointer;
+}
+
+.btn:hover:not(:disabled),
+.row:hover {
+  background: #3b4238;
+}
+
+.btn:disabled {
+  color: var(--latent);
+  cursor: default;
+}
+
+/* ---- foot ----------------------------------------------------------------- */
+
+.foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  margin-bottom: 0;
+}
+
+.sync-status {
+  color: var(--latent);
+  font: 400 11px/1.4 var(--condensed);
+  font-variant-numeric: tabular-nums;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+body.is-syncing .sync-status {
+  color: var(--safelight);
+}
+
+/* ---- messages ------------------------------------------------------------- */
+
+.message {
+  padding: 14px 16px;
+  background: var(--frame);
+  margin-bottom: 2px;
+  color: var(--latent);
+  font: 400 13px/1.5 var(--body);
+}
+
+.message.is-error {
+  color: var(--emulsion);
+}
+
+[hidden] {
+  display: none !important;
+}
+
+/* ---- focus (spec §6.5) ---------------------------------------------------- */
+
+:focus-visible {
+  outline: 2px solid var(--safelight);
+  outline-offset: 2px;
+}
+
+/* ---- reduced motion (spec §6.5) ------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .cross path {
+    transition: none;
+  }
+  .master::after {
+    transition: none;
+  }
+  body.is-syncing .sprocket rect {
+    animation: none;
+    fill: var(--safelight);
+  }
+}

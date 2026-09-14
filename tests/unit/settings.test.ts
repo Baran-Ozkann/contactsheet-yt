@@ -94,6 +94,32 @@ describe('coerceSettings', () => {
   });
 });
 
+describe('defaults are never shared', () => {
+  it('hands each caller its own playlists map', async () => {
+    const first = coerceSettings(null);
+    first.playlists.PLabc123 = { title: 'x', hidden: true, itemCount: null, lastSyncedAt: null };
+    // A shallow spread of DEFAULT_SETTINGS would leak this into every later
+    // fallback, so the "safe default" would carry someone else's data.
+    expect(Object.keys(coerceSettings(null).playlists)).toEqual([]);
+    expect(Object.keys(DEFAULT_SETTINGS.playlists)).toEqual([]);
+  });
+
+  it('freezes the constant so accidental mutation cannot pass silently', () => {
+    expect(Object.isFrozen(DEFAULT_SETTINGS)).toBe(true);
+    expect(Object.isFrozen(DEFAULT_SETTINGS.playlists)).toBe(true);
+  });
+
+  it('gives readSettings a fresh map on the failure path too', async () => {
+    const storage = installFakeChrome();
+    storage.failing = true;
+    const a = await readSettings();
+    a.playlists.PLabc123 = { title: 'x', hidden: true, itemCount: null, lastSyncedAt: null };
+    const b = await readSettings();
+    expect(Object.keys(b.playlists)).toEqual([]);
+    vi.unstubAllGlobals();
+  });
+});
+
 describe('settings store', () => {
   let storage: FakeStorage;
 
