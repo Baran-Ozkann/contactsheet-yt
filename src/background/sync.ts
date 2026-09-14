@@ -1,5 +1,6 @@
 import { coerceIndexEntry } from '../core/schema.js';
-import { pruneIndexes, writeIndex } from '../core/index-store.js';
+import { indexKey, pruneIndexes, writeIndex } from '../core/index-store.js';
+import type { Layer, PlaylistView, PopupState } from '../core/messaging.js';
 import { readSettings, writeSettings } from '../core/settings.js';
 import { isPlaylistId, type IndexEntry, type PlaylistId } from '../core/types.js';
 import { log } from '../core/logger.js';
@@ -137,4 +138,110 @@ async function runSync(playlistIds?: readonly PlaylistId[]): Promise<SyncOutcome
 export function resetSyncState(): void {
   inFlight = null;
   writeChain = Promise.resolve();
+}
+
+// ---- popup state -----------------------------------------------------------
+
+/**
+ * Which layer a playlist is genuinely being filtered at (spec §4.0). The popup
+ * shows this so nobody has to guess why a playlist is "marked hidden but its
+ * videos still show" — that state is L0, and it is legitimate.
+ */
+export function layerFor(entry: IndexEntry | null): Layer {
+  if (!entry || entry.videoIds.length === 0) return 'L0';
+  return entry.complete ? 'L2' : 'L1';
+}
+
+/**
+ * Resolves settings plus index state into exactly what the popup renders. The
+ * popup does no work of its own (spec §2.2), so every derived number is
+ * computed here.
+ */
+export async function buildPopupState(): Promise<PopupState> {
+  const settings = await readSettings();
+  const ids = Object.keys(settings.playlists).filter(isPlaylistId);
+
+  let stored: Record<string, unknown> = {};
+  try {
+    stored = await chrome.storage.local.get(ids.map(indexKey));
+  } catch {
+    // Fail open: an unreadable index reports as L0, never as a full one.
+    stored = {};
+  }
+
+  const playlists: PlaylistView[] = ids.map((id) => {
+    const setting = settings.playlists[id];
+    const entry = coerceIndexEntry(stored[indexKey(id)], id);
+    return {
+      id,
+      title: setting?.title ?? id,
+      hidden: setting?.hidden ?? false,
+      itemCount: setting?.itemCount ?? null,
+      indexedCount: entry?.videoIds.length ?? 0,
+      complete: entry?.complete ?? false,
+      layer: layerFor(entry),
+      lastSyncedAt: setting?.lastSyncedAt ?? null,
+    };
+  });
+
+  const hiddenRows = playlists.filter((row) => row.hidden);
+  const lastSyncedAt = playlists.reduce<number | null>(
+    (latest, row) =>
+      row.lastSyncedAt !== null && (latest === null || row.lastSyncedAt > latest)
+        ? row.lastSyncedAt
+        : latest,
+    null,
+  );
+
+  return {
+    enabled: settings.enabled,
+    debugOverlay: settings.debugOverlay,
+    syncing: isSyncing(),
+    playlists,
+    hiddenPlaylistCount: hiddenRows.length,
+    hiddenVideoCount: hiddenRows.reduce((sum, row) => sum + row.indexedCount, 0),
+    lastSyncedAt,
+  };
+}
+
+/**
+ * Playlist mutations. Each is a read-modify-write on settings, so each goes
+ * through the same queue as every other write.
+ */
+export async function addPlaylist(playlistId: PlaylistId): Promise<boolean> {
+  if (!isPlaylistId(playlistId)) return false;
+  return serializeWrite(async () => {
+    const settings = await readSettings();
+    if (settings.playlists[playlistId]) return false;
+    settings.playlists[playlistId] = {
+      // The id stands in until the first sync fills the real title (spec §4.1).
+      title: playlistId,
+      hidden: true,
+      itemCount: null,
+      lastSyncedAt: null,
+    };
+    await writeSettings(settings);
+    return true;
+  });
+}
+
+export async function removePlaylist(playlistId: PlaylistId): Promise<void> {
+  if (!isPlaylistId(playlistId)) return;
+  await serializeWrite(async () => {
+    const settings = await readSettings();
+    delete settings.playlists[playlistId];
+    await writeSettings(settings);
+    await chrome.storage.local.remove(indexKey(playlistId));
+  });
+}
+
+export async function setPlaylistHidden(playlistId: PlaylistId, hidden: boolean): Promise<void> {
+  if (!isPlaylistId(playlistId)) return;
+  await serializeWrite(async () => {
+    const settings = await readSettings();
+    const entry = settings.playlists[playlistId];
+    if (!entry) return;
+    entry.hidden = hidden;
+    await writeSettings(settings);
+  });
 }

@@ -1,6 +1,13 @@
 import { isMessage, isTrustedSender, type Message } from '../core/messaging.js';
 import { readSettings, writeSettings } from '../core/settings.js';
-import { isSyncing, startSync } from './sync.js';
+import {
+  addPlaylist,
+  buildPopupState,
+  isSyncing,
+  removePlaylist,
+  setPlaylistHidden,
+  startSync,
+} from './sync.js';
 import { log } from '../core/logger.js';
 
 const SYNC_ALARM = 'contactsheet:sync';
@@ -68,6 +75,20 @@ async function handle(message: Message): Promise<unknown> {
 
     case 'sync:status':
       return { ok: true, syncing: isSyncing() };
+
+    case 'popup:state':
+      return { ok: true, state: await buildPopupState() };
+
+    case 'playlists:add':
+      return { ok: await addPlaylist(message.playlistId) };
+
+    case 'playlists:remove':
+      await removePlaylist(message.playlistId);
+      return { ok: true };
+
+    case 'playlists:toggle':
+      await setPlaylistHidden(message.playlistId, message.hidden);
+      return { ok: true };
 
     default:
       // Known type, not implemented in this phase.

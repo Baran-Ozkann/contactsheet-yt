@@ -1,5 +1,35 @@
 import type { PlaylistId, Settings } from './types.js';
 
+/** Which capability layer a playlist is actually being filtered at (spec §4.0). */
+export type Layer = 'L0' | 'L1' | 'L2';
+
+/**
+ * One row of the popup. The popup does no work of its own (spec §2.2), so the
+ * worker resolves settings and index state into exactly what gets rendered.
+ */
+export interface PlaylistView {
+  id: PlaylistId;
+  title: string;
+  hidden: boolean;
+  /** Total the playlist claims to hold; null until a sync has run. */
+  itemCount: number | null;
+  /** How many ids we actually hold. */
+  indexedCount: number;
+  complete: boolean;
+  layer: Layer;
+  lastSyncedAt: number | null;
+}
+
+export interface PopupState {
+  enabled: boolean;
+  debugOverlay: boolean;
+  syncing: boolean;
+  playlists: PlaylistView[];
+  hiddenPlaylistCount: number;
+  hiddenVideoCount: number;
+  lastSyncedAt: number | null;
+}
+
 /**
  * The only message types that exist. Anything else is dropped by the router.
  * Phases 2–5 extend this union; they do not invent ad-hoc string types.
@@ -14,6 +44,11 @@ export type Message =
   // Service worker -> content script. The worker has no network access of its
   // own (spec §2.1), so it hands the job to a tab on youtube.com.
   | { type: 'sync:run'; playlistIds: PlaylistId[] }
+  // Popup -> worker. Every mutation is a request; the worker owns the write.
+  | { type: 'popup:state' }
+  | { type: 'playlists:add'; playlistId: PlaylistId }
+  | { type: 'playlists:remove'; playlistId: PlaylistId }
+  | { type: 'playlists:toggle'; playlistId: PlaylistId; hidden: boolean }
   | { type: 'ping' };
 
 export const MESSAGE_TYPES: ReadonlySet<Message['type']> = new Set([
@@ -24,6 +59,10 @@ export const MESSAGE_TYPES: ReadonlySet<Message['type']> = new Set([
   'sync:start',
   'sync:status',
   'sync:run',
+  'popup:state',
+  'playlists:add',
+  'playlists:remove',
+  'playlists:toggle',
   'ping',
 ]);
 
