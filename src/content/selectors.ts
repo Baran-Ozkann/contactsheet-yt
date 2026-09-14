@@ -5,7 +5,9 @@
  * try them in order, first match wins, and if none match fall back to the
  * generic anchor walk in scanner.ts rather than guessing.
  *
- * Last verified against YouTube web: (fill in when Phase 4 lands)
+ * Last verified against YouTube web: 2026-09-14. Confirmed live on the signed-in
+ * homepage — the debug overlay marked the expected cards, and real hiding left
+ * the grid intact with no gaps.
  */
 export const SELECTORS = {
   grid: [

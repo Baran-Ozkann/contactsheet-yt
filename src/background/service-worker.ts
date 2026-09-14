@@ -59,6 +59,10 @@ async function handle(message: Message): Promise<unknown> {
       return { ok: true, settings: next };
     }
 
+    // Entry point for a sync. Note a service worker does not receive its own
+    // runtime messages: sending this from the worker's own devtools console
+    // fails with "Receiving end does not exist". Send it from the popup or a
+    // page context instead.
     case 'sync:start':
       return startSync(message.playlistIds);
 
