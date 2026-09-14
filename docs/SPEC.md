@@ -367,14 +367,18 @@ of NFR-04).
 
 ### 6.2 Tokens
 ```
---film      #2B2F27   background (cool olive-grey; NOT black)
---frame     #343A31   frame background
---emulsion  #D6D2C4   primary text (silvery off-white)
---latent    #8E9184   secondary text
+--film      #24262A   background (neutral cool charcoal; NOT black)
+--frame     #34373D   frame background
+--emulsion  #E4E1DA   primary text (silvery off-white)
+--latent    #A0A3AA   secondary text
 --grease    #D0342C   grease-pencil red — only for the cross and the hidden counter
 --safelight #E8A33D   amber — only for sync status
 ```
 The two accents are deliberate: red means a *decision*, amber means a *process*. The roles are never mixed.
+
+The surfaces are a deliberate two steps apart in luminance (a 1.97× ratio). The
+2px frame gaps of §6.4 are the only separator between rows, so if `--film` and
+`--frame` sit too close the strip reads as one undifferentiated block.
 
 ### 6.3 Typography
 A single family: **Archivo** (local `.woff2` in `assets/fonts/`; the Google Fonts CDN is **forbidden**).

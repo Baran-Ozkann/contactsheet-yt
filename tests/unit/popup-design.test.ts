@@ -7,6 +7,27 @@ import { describe, expect, it } from 'vitest';
 // is vitest's working directory.
 const css = readFileSync('src/popup/popup.css', 'utf8');
 const html = readFileSync('src/popup/index.html', 'utf8');
+const spec = readFileSync('docs/SPEC.md', 'utf8');
+
+/** The palette as §6.2 declares it — the binding source, not a copy of it. */
+function specPalette(): Record<string, string> {
+  const block = /### 6\.2 Tokens\s*```([\s\S]*?)```/.exec(spec)?.[1] ?? '';
+  const out: Record<string, string> = {};
+  for (const line of block.split('\n')) {
+    const found = /^(--[a-z]+)\s+(#[0-9A-Fa-f]{6})/.exec(line.trim());
+    if (found?.[1] && found[2]) out[found[1]] = found[2].toLowerCase();
+  }
+  return out;
+}
+
+/** The palette as the stylesheet actually defines it. */
+function cssPalette(): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const m of css.matchAll(/(--(?:film|frame|emulsion|latent|grease|safelight)):\s*(#[0-9a-f]{6})/gi)) {
+    if (m[1] && m[2]) out[m[1]] = m[2].toLowerCase();
+  }
+  return out;
+}
 
 /**
  * Spec §6 is binding, and its "Forbidden" list is the part most likely to drift
@@ -41,10 +62,19 @@ describe('spec §6 forbidden list', () => {
 });
 
 describe('spec §6 required properties', () => {
-  it('declares the exact palette from §6.2', () => {
-    for (const token of ['#2b2f27', '#343a31', '#d6d2c4', '#d0342c', '#e8a33d']) {
-      expect(css.toLowerCase()).toContain(token);
-    }
+  it('declares the exact palette §6.2 specifies, with no drift', () => {
+    const fromSpec = specPalette();
+    // Guard the guard: if the spec block ever stops parsing, this assertion
+    // would pass against an empty object and prove nothing.
+    expect(Object.keys(fromSpec).sort()).toEqual([
+      '--emulsion',
+      '--film',
+      '--frame',
+      '--grease',
+      '--latent',
+      '--safelight',
+    ]);
+    expect(cssPalette()).toEqual(fromSpec);
   });
 
   it('is a 380 x 520 popup (§6.4)', () => {

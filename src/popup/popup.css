@@ -25,13 +25,14 @@
 
 :root {
   /* Spec §6.2 */
-  --film: #2b2f27;
-  --frame: #343a31;
-  --emulsion: #d6d2c4;
-  /* Spec's #8E9184 measures 3.64:1 on --frame, short of the 4.5:1 §6.7
-     requires. §6.7 says to verify and adjust the token, so this is the minimal
-     hue-preserving lift: 4.59:1 on --frame, 5.35:1 on --film. */
-  --latent: #a0a495;
+  --film: #24262a;
+  --frame: #34373d;
+  --emulsion: #e4e1da;
+  /* #9A9DA4 measures 4.39:1 on --frame, just short of the 4.5:1 §6.7 requires,
+     and rows sit on --frame. #A0A3AA is the minimal hue-preserving lift with
+     headroom rather than landing exactly on the threshold: 4.72:1 on --frame,
+     6.00:1 on --film. */
+  --latent: #a0a3aa;
   --grease: #d0342c;
   --safelight: #e8a33d;
 
