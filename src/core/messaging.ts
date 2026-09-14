@@ -11,6 +11,9 @@ export type Message =
   | { type: 'playlists:discover' }
   | { type: 'sync:start'; playlistIds?: PlaylistId[] }
   | { type: 'sync:status' }
+  // Service worker -> content script. The worker has no network access of its
+  // own (spec §2.1), so it hands the job to a tab on youtube.com.
+  | { type: 'sync:run'; playlistIds: PlaylistId[] }
   | { type: 'ping' };
 
 export const MESSAGE_TYPES: ReadonlySet<Message['type']> = new Set([
@@ -20,6 +23,7 @@ export const MESSAGE_TYPES: ReadonlySet<Message['type']> = new Set([
   'playlists:discover',
   'sync:start',
   'sync:status',
+  'sync:run',
   'ping',
 ]);
 

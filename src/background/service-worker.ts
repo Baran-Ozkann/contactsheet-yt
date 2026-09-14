@@ -1,5 +1,6 @@
 import { isMessage, isTrustedSender, type Message } from '../core/messaging.js';
 import { readSettings, writeSettings } from '../core/settings.js';
+import { isSyncing, startSync } from './sync.js';
 import { log } from '../core/logger.js';
 
 const SYNC_ALARM = 'contactsheet:sync';
@@ -30,7 +31,8 @@ async function scheduleSync(): Promise<void> {
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name !== SYNC_ALARM) return;
   log.debug('sync alarm fired');
-  // Phase 3 wires this to findYouTubeTab() + tabs.sendMessage.
+  // Fire and forget: a failed scheduled sync writes nothing and hides nothing.
+  void startSync();
 });
 
 chrome.runtime.onMessage.addListener((raw, sender, sendResponse) => {
@@ -57,17 +59,15 @@ async function handle(message: Message): Promise<unknown> {
       return { ok: true, settings: next };
     }
 
+    case 'sync:start':
+      return startSync(message.playlistIds);
+
+    case 'sync:status':
+      return { ok: true, syncing: isSyncing() };
+
     default:
       // Known type, not implemented in this phase.
       return { ok: false, reason: 'not-implemented' };
   }
 }
 
-/**
- * Works with host_permissions alone — the "tabs" permission is deliberately
- * not requested (spec §7.3).
- */
-export async function findYouTubeTab(): Promise<chrome.tabs.Tab | undefined> {
-  const tabs = await chrome.tabs.query({ url: 'https://www.youtube.com/*' });
-  return tabs.find((tab) => typeof tab.id === 'number');
-}
