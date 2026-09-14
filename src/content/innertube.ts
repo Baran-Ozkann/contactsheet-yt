@@ -286,3 +286,93 @@ export function extractPlaylistTitle(data: unknown): string | null {
   }
   return null;
 }
+
+export interface DiscoveredPlaylist {
+  id: string;
+  /** Display only; null when no title shape was recognised. */
+  title: string | null;
+}
+
+/**
+ * Best-effort title for a renderer node. Several shapes, none measured.
+ */
+function nodeTitle(node: Record<string, unknown>): string | null {
+  const read = (path: readonly string[]): string | null => {
+    let cursor: unknown = node;
+    for (const key of path) {
+      if (cursor === null || typeof cursor !== 'object') return null;
+      cursor = (cursor as Record<string, unknown>)[key];
+    }
+    return typeof cursor === 'string' && cursor.trim() !== '' ? cursor.trim().slice(0, 200) : null;
+  };
+  return (
+    read(['title', 'simpleText']) ??
+    read(['title', 'runs', '0', 'text']) ??
+    read(['metadata', 'lockupMetadataViewModel', 'title', 'content']) ??
+    read(['title', 'content'])
+  );
+}
+
+/**
+ * Playlist ids and titles from a library payload (spec §4.1, automatic
+ * discovery).
+ *
+ * ⚠ UNVERIFIED SHAPES. ADR-0002 measured playlist *contents*, not the library
+ * page, so the three renderer shapes below are inferred rather than observed.
+ * That is tolerable precisely because spec §4.1 treats discovery failure as
+ * non-fatal: manual URL entry (FR-11) is always available, and returning an
+ * empty list hides nothing. Confirm against a real account before the popup
+ * relies on this.
+ */
+export function extractPlaylistSummaries(data: unknown): DiscoveredPlaylist[] {
+  const found: DiscoveredPlaylist[] = [];
+  const seen = new Set<string>();
+
+  const take = (id: unknown, node: Record<string, unknown>): void => {
+    if (!isPlaylistId(id) || seen.has(id)) return;
+    seen.add(id);
+    found.push({ id, title: nodeTitle(node) });
+  };
+
+  const walk = (node: unknown, depth: number): void => {
+    if (node === null || typeof node !== 'object') return;
+    if (depth >= MAX_PARSE_DEPTH) return;
+    if (Array.isArray(node)) {
+      for (const item of node) walk(item, depth + 1);
+      return;
+    }
+
+    const record = node as Record<string, unknown>;
+
+    // New shape, mirroring the video lockup but for playlists.
+    if (record.contentType === 'LOCKUP_CONTENT_TYPE_PLAYLIST') take(record.contentId, record);
+
+    // Older grid/list renderers, where the renderer name is the discriminator.
+    for (const key of ['gridPlaylistRenderer', 'playlistRenderer']) {
+      const renderer = record[key];
+      if (renderer !== null && typeof renderer === 'object') {
+        const r = renderer as Record<string, unknown>;
+        take(r.playlistId, r);
+      }
+    }
+
+    for (const value of Object.values(record)) walk(value, depth + 1);
+  };
+
+  walk(data, 0);
+  return found;
+}
+
+/** Fetches the playlist library page and reads the user's own playlists. */
+export async function discoverPlaylists(signal?: AbortSignal): Promise<DiscoveredPlaylist[]> {
+  try {
+    const res = await fetch(`${ORIGIN}/feed/playlists`, {
+      credentials: 'include',
+      ...(signal ? { signal } : {}),
+    });
+    if (!res.ok) return [];
+    return extractPlaylistSummaries(extractYtInitialData(await res.text()));
+  } catch {
+    return [];
+  }
+}
