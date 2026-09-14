@@ -9,11 +9,51 @@
   <body>
     <!-- Text is filled from _locales at load (spec §10 rule 13); lang is set
          from the resolved UI language, so neither is hardcoded here. -->
-    <main id="root">
-      <h1 id="title" data-i18n="popupTitle"></h1>
-      <p id="status" role="status" aria-live="polite" data-i18n="popupConnecting"></p>
-      <p class="note" data-i18n="popupPhaseNote"></p>
-    </main>
+
+    <!-- The sprocket strip: the design's one decorative element (spec §6.4).
+         Holes are generated at load so the count fits the popup height. -->
+    <svg class="sprocket" id="sprocket" aria-hidden="true" focusable="false"></svg>
+
+    <div class="strip">
+      <div class="head">
+        <div class="head-top">
+          <h1 id="title" data-i18n="popupTitle"></h1>
+          <button
+            type="button"
+            class="master"
+            id="master"
+            role="switch"
+            aria-checked="true"
+            data-i18n-aria="popupMasterLabel"
+          ></button>
+        </div>
+        <p class="subtitle" id="subtitle"></p>
+      </div>
+
+      <p class="message" id="message" hidden></p>
+
+      <div class="rows" id="rows"></div>
+
+      <div class="add">
+        <label class="sr-only" for="add-input" id="add-label" data-i18n="popupAddLabel"></label>
+        <input id="add-input" type="text" autocomplete="off" spellcheck="false" />
+        <button type="button" class="btn" id="add-button" data-i18n="popupAddAction"></button>
+      </div>
+
+      <div class="foot">
+        <span class="sync-status" id="sync-status"></span>
+        <button type="button" class="btn" id="refresh" data-i18n="actionRefresh"></button>
+      </div>
+    </div>
+
+    <!-- Every state change is announced here (spec §6.7). -->
+    <p
+      id="live"
+      role="status"
+      aria-live="polite"
+      style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%)"
+    ></p>
+
     <script src="popup.js"></script>
   </body>
 </html>
