@@ -117,30 +117,54 @@ export class BatchQueue<T> {
   }
 }
 
-/** Does this element look like something we can judge? Spec §5.3. */
-export function isCandidate(el: Element): boolean {
-  for (const slot of ['item', 'section'] as const) {
-    for (const selector of SELECTORS[slot]) {
-      if (el.matches(selector)) return true;
-    }
-  }
-  // Generic fallback for A/B-tested component names: anything holding a link we
-  // can identify. Note this only ever finds MORE candidates to examine — each
-  // one still has to match the index before it is marked, so a selector miss
-  // cannot turn into over-hiding.
-  return el.querySelector('a[href*="/watch"], a[href*="/playlist"]') !== null;
+const CARD_SELECTORS: readonly string[] = [...SELECTORS.item, ...SELECTORS.section];
+const CARD_SELECTOR_LIST = CARD_SELECTORS.join(',');
+const IDENTIFIABLE_LINK = 'a[href*="/watch"], a[href*="/playlist"]';
+
+/** Does this element match one of the known card shapes? */
+export function isKnownCard(el: Element): boolean {
+  return CARD_SELECTORS.some((selector) => el.matches(selector));
 }
 
-/** Collects candidate elements from a subtree, including its root. */
-export function collectCandidates(root: Element): Element[] {
-  const out: Element[] = [];
-  if (isCandidate(root)) out.push(root);
-  for (const slot of ['item', 'section'] as const) {
-    for (const selector of SELECTORS[slot]) {
-      for (const el of root.querySelectorAll(selector)) out.push(el);
-    }
+function hasIdentifiableLink(el: Element): boolean {
+  return el.querySelector(IDENTIFIABLE_LINK) !== null;
+}
+
+/** Judgeable on its own: a known card, or an unknown one holding a link. */
+export function isCandidate(el: Element): boolean {
+  return isKnownCard(el) || hasIdentifiableLink(el);
+}
+
+/**
+ * Collects the elements worth judging inside `root`.
+ *
+ * `asScanRoot` marks the grid container. A container is never a candidate for
+ * itself: it contains every card's link, so judging it would match the first
+ * hidden video on the page and mark the whole grid — the homepage goes blank.
+ * That is the exact failure NFR-04 exists to prevent, so containers are
+ * structurally excluded rather than guarded against case by case.
+ *
+ * The generic fallback of spec §5.3 is therefore scoped to direct children that
+ * no known selector claimed, and only when they hold no known card themselves.
+ */
+export function collectCandidates(root: Element, asScanRoot = false): Element[] {
+  const out = new Set<Element>();
+  for (const el of root.querySelectorAll(CARD_SELECTOR_LIST)) out.add(el);
+
+  if (!asScanRoot) {
+    // An inserted node may be a card in its own right.
+    if (isKnownCard(root)) out.add(root);
+    else if (out.size === 0 && hasIdentifiableLink(root)) out.add(root);
+    return [...out];
   }
-  return [...new Set(out)];
+
+  for (const child of root.children) {
+    if (out.has(child) || isKnownCard(child)) continue;
+    // Wrappers holding known cards are skipped; their cards are already in.
+    if (child.querySelector(CARD_SELECTOR_LIST) !== null) continue;
+    if (hasIdentifiableLink(child)) out.add(child);
+  }
+  return [...out];
 }
 
 export function findGridContainer(root: ParentNode = document): Element | null {
@@ -185,7 +209,7 @@ export class Scanner {
 
   /** Re-judges everything currently in the container. */
   sweep(container: Element): void {
-    this.queue.push(collectCandidates(container));
+    this.queue.push(collectCandidates(container, true));
   }
 
   start(container: Element): void {
