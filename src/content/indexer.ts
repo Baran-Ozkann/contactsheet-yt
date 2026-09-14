@@ -26,11 +26,7 @@ import { log } from '../core/logger.js';
 export const MIN_REQUEST_SPACING_MS = 400;
 /** Spec §4.3 — hard ceiling on continuation pages for one playlist. */
 export const MAX_CONTINUATION_PAGES = 200;
-/**
- * Spec §4.3 gives the ladder as 1s -> 2s -> 4s -> 8s with "max 4 attempts".
- * Four attempts leave three gaps, so the first three rungs are the reachable
- * ones; the 8s rung would only apply if the attempt cap were raised.
- */
+/** Spec §4.3: four attempts with three delays. */
 export const MAX_ATTEMPTS = 4;
 export const BACKOFF_MS: readonly number[] = [1_000, 2_000, 4_000];
 
