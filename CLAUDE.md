@@ -115,7 +115,7 @@ left as written.
 
 ## Current status
 
-- **Phase 0 complete.** Scaffold, build script (`build.mjs`, esbuild), lint security rules, vitest, manifest, icons, TR/EN locales, CI and ADR-0001 are all in place and green.
-- **Phase 2 decision gate passed.** The spike was run against a real account; `docs/adr/0002-playlist-access.md` was written and approved. The read path is settled: playlist HTML plus unsigned InnerTube continuation requests. Cookie reading and the iframe approach were ruled out.
-- `src/content/identify.ts` and `src/core/playlist-input.ts` are written and tested.
-- **Next up: Phase 1** (storage, schema, messaging), then Phase 3 (the indexer — per ADR-0002).
+- **Phases 0, 1 and 2 complete.** Scaffold and toolchain; core storage, schema validators and the messaging contract; the ADR-0002 decision gate.
+- **Phase 3 in progress on `phase-3-indexer`.** InnerTube read path, the playlist indexer, automatic discovery, and sync orchestration are written and tested. Manual Chrome verification is still outstanding.
+- Automatic discovery was folded in from Phase 2 because it shares the request layer with the indexer. Its renderer shapes are **inferred, not measured** — confirm against a real account before the popup depends on it.
+- **Next up: Phase 4** (the hiding engine — scanner, hider, selector fallback).
