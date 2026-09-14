@@ -16,6 +16,13 @@ export interface PlaylistView {
   /** How many ids we actually hold. */
   indexedCount: number;
   complete: boolean;
+  /**
+   * True only when we can actually show a shortfall: the chain did not finish,
+   * we know what the playlist claims to hold, and we hold fewer than that.
+   * Holding 32 of 32 is complete in every sense the user cares about, whatever
+   * the flag says.
+   */
+  partial: boolean;
   layer: Layer;
   lastSyncedAt: number | null;
 }

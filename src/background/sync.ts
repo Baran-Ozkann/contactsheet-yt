@@ -172,13 +172,20 @@ export async function buildPopupState(): Promise<PopupState> {
   const playlists: PlaylistView[] = ids.map((id) => {
     const setting = settings.playlists[id];
     const entry = coerceIndexEntry(stored[indexKey(id)], id);
+    const indexedCount = entry?.videoIds.length ?? 0;
+    const itemCount = setting?.itemCount ?? null;
+    const complete = entry?.complete ?? false;
     return {
       id,
       title: setting?.title ?? id,
       hidden: setting?.hidden ?? false,
-      itemCount: setting?.itemCount ?? null,
-      indexedCount: entry?.videoIds.length ?? 0,
-      complete: entry?.complete ?? false,
+      itemCount,
+      indexedCount,
+      complete,
+      // Reporting "32/32" as partial is worse than saying nothing: it tells the
+      // user something is missing when nothing is. A shortfall has to be
+      // demonstrable — a known total we genuinely hold fewer than.
+      partial: !complete && indexedCount > 0 && itemCount !== null && indexedCount < itemCount,
       layer: layerFor(entry),
       lastSyncedAt: setting?.lastSyncedAt ?? null,
     };

@@ -117,7 +117,7 @@ function rowNote(view: PlaylistView): string | null {
   // A hidden playlist with no index is L0: its card goes, its videos stay. That
   // is legitimate, and saying so beats letting the user guess (spec §4.0).
   if (view.hidden && view.layer === 'L0') return t('popupLayerCardOnly');
-  if (view.hidden && !view.complete && view.indexedCount > 0) {
+  if (view.hidden && view.partial) {
     return t('popupPartial', num(view.indexedCount), num(view.itemCount ?? view.indexedCount));
   }
   return null;
