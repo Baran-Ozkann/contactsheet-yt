@@ -2,9 +2,17 @@
   "extName":        { "message": "Contact Sheet" },
   "extDescription": { "message": "Hides videos from playlists you choose on the YouTube homepage." },
   "popupTitle":     { "message": "Hidden from your homepage" },
+  "popupConnecting": { "message": "Connecting…" },
   "popupEmpty":     { "message": "No playlists read yet. Open YouTube and we'll fetch your lists." },
   "popupNoTab":     { "message": "Syncing needs an open YouTube tab." },
   "popupError":     { "message": "Couldn't fetch your playlists. YouTube's response looked different. Try again." },
+  "popupSettingsError": { "message": "Couldn't read your settings. Reload the extension." },
+  "popupBackgroundError": { "message": "Couldn't reach the background service." },
+  "popupSavedCount": {
+    "message": "Saved playlists: $COUNT$",
+    "placeholders": { "count": { "content": "$1", "example": "3" } }
+  },
+  "popupPhaseNote": { "message": "The interface arrives in Phase 5." },
   "actionRefresh":  { "message": "Refresh" },
   "actionRefreshing": { "message": "Refreshing" }
 }

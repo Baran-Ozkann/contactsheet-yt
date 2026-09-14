@@ -2,9 +2,17 @@
   "extName":        { "message": "Contact Sheet" },
   "extDescription": { "message": "Seçtiğin oynatma listelerindeki videoları YouTube ana sayfasından gizler." },
   "popupTitle":     { "message": "Ana sayfada gizlenenler" },
+  "popupConnecting": { "message": "Bağlanıyor…" },
   "popupEmpty":     { "message": "Henüz liste okunmadı. YouTube'u aç, listelerini buradan getirelim." },
   "popupNoTab":     { "message": "Senkronizasyon için açık bir YouTube sekmesi gerekiyor." },
   "popupError":     { "message": "Listeler alınamadı. YouTube yanıtı beklenenden farklı. Tekrar dene." },
+  "popupSettingsError": { "message": "Ayarlar okunamadı. Eklentiyi yeniden yükle." },
+  "popupBackgroundError": { "message": "Arka plan servisine ulaşılamadı." },
+  "popupSavedCount": {
+    "message": "Kayıtlı liste: $COUNT$",
+    "placeholders": { "count": { "content": "$1", "example": "3" } }
+  },
+  "popupPhaseNote": { "message": "Arayüz Faz 5'te uygulanacak." },
   "actionRefresh":  { "message": "Yenile" },
   "actionRefreshing": { "message": "Yenileniyor" }
 }
