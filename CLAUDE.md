@@ -107,6 +107,7 @@ One logical change per commit. A phase produces several commits, not one.
 - Refactors and renames are their own commits, never mixed with behaviour.
 - Each commit must build and pass `npm run check` on its own. Verify by
   checking out each commit in turn and running it — do not assume.
+- Commit messages carry no co-author or attribution trailers.
 
 Phase 1 is the counter-example: schema validators, the index store, the
 messaging timeout and two security fixes landed as one commit. That should
