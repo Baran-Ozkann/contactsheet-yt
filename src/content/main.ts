@@ -1,16 +1,18 @@
 import { DEBUG_ATTR, HIDDEN_ATTR, STYLE_ID } from './selectors.js';
+import { Scanner, findGridContainer } from './scanner.js';
+import { clearSeen, unhideAll } from './hider.js';
 import { indexPlaylist } from './indexer.js';
+import { buildHiddenVideoSet } from '../core/index-store.js';
+import { readSettings } from '../core/settings.js';
 import { isMessage, isTrustedSender } from '../core/messaging.js';
-import { isPlaylistId, type IndexEntry } from '../core/types.js';
+import { isPlaylistId, type IndexEntry, type PlaylistId } from '../core/types.js';
 import { log } from '../core/logger.js';
 
 /**
  * Runs at document_start on youtube.com.
  *
- * Phase 3 scope: inject the stylesheet and serve indexing jobs for the service
- * worker, which cannot reach the network itself (spec §2.1). The scanner and
- * hider arrive in Phase 4 — nothing here hides anything yet, and nothing ever
- * hides on a failure path (NFR-04).
+ * Two jobs: filter the homepage grid, and serve indexing jobs for the service
+ * worker, which cannot reach the network itself (spec §2.1).
  */
 
 const CSS = `
@@ -35,10 +37,70 @@ function isHomepage(): boolean {
   return location.pathname === '/' || location.pathname === '';
 }
 
+// ---- filtering --------------------------------------------------------------
+
+const scanner = new Scanner();
+let attached = false;
+
 /**
- * Cancels in-flight indexing when the page goes away. Spec §4.3 requires a
- * clean abort on navigation or tab close rather than letting requests run on.
+ * Waits a bounded number of frames for the grid to exist. The document is empty
+ * at document_start, and spec §5.4 forbids polling — so this gives up rather
+ * than watching forever, and the next yt-navigate-finish will try again.
  */
+function waitForGrid(framesLeft: number, then: (grid: Element) => void): void {
+  const grid = findGridContainer();
+  if (grid) {
+    then(grid);
+    return;
+  }
+  if (framesLeft <= 0) return;
+  requestAnimationFrame(() => waitForGrid(framesLeft - 1, then));
+}
+
+function detach(): void {
+  if (!attached) return;
+  scanner.stop();
+  attached = false;
+}
+
+async function refresh(): Promise<void> {
+  const settings = await readSettings();
+
+  // Master toggle (FR-08): everything comes back with no page reload, because
+  // hiding was only ever an attribute.
+  if (!settings.enabled) {
+    detach();
+    unhideAll();
+    return;
+  }
+
+  const videos = await buildHiddenVideoSet(settings);
+  const playlists = new Set<PlaylistId>(
+    Object.entries(settings.playlists)
+      .filter(([, value]) => value.hidden)
+      .map(([id]) => id),
+  );
+
+  scanner.setHidden({ videos, playlists });
+  scanner.setDebug(settings.debugOverlay);
+
+  if (!isHomepage()) {
+    detach();
+    return;
+  }
+
+  // The sets just changed, so previous verdicts are stale: a card judged
+  // visible under the old settings has to be judged again, not skipped.
+  clearSeen();
+
+  waitForGrid(60, (grid) => {
+    scanner.start(grid);
+    attached = true;
+  });
+}
+
+// ---- indexing jobs ----------------------------------------------------------
+
 let syncAbort: AbortController | null = null;
 
 function cancelSync(reason: string): void {
@@ -79,6 +141,8 @@ async function runSyncJob(playlistIds: readonly string[]): Promise<{ entries: In
   return { entries };
 }
 
+// ---- wiring -----------------------------------------------------------------
+
 function start(): void {
   injectStyle();
   log.debug('content script ready', { homepage: isHomepage() });
@@ -94,13 +158,25 @@ function start(): void {
     return true; // async response
   });
 
+  // The worker is the only writer, so its writes are the change signal. This is
+  // what makes the master toggle and a finished sync take effect live.
+  chrome.storage.onChanged.addListener((_changes, area) => {
+    if (area !== 'local') return;
+    void refresh();
+  });
+
   // YouTube is a single-page app: navigation does not reload the document.
   window.addEventListener('yt-navigate-finish', () => {
     log.debug('navigation', { homepage: isHomepage() });
-    // Phase 4: attach/detach the MutationObserver here.
+    void refresh();
   });
 
-  window.addEventListener('pagehide', () => cancelSync('pagehide'));
+  window.addEventListener('pagehide', () => {
+    cancelSync('pagehide');
+    detach();
+  });
+
+  void refresh();
 }
 
 start();
