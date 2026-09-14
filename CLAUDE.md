@@ -96,6 +96,23 @@ I do the pushing. You report and wait for approval.
 
 Keep the report short. If there is a ❌ anywhere in the acceptance criteria table the phase is not closed; do not ask for approval, finish what is missing.
 
+## Commit granularity
+
+One logical change per commit. A phase produces several commits, not one.
+
+- A security fix never rides inside a feature commit. It gets its own `fix:`
+  commit so it stays findable in `git log --oneline`.
+- Separate modules are separate commits, even when written in one sitting.
+- Tests land in the same commit as the code they cover.
+- Refactors and renames are their own commits, never mixed with behaviour.
+- Each commit must build and pass `npm run check` on its own. Verify by
+  checking out each commit in turn and running it — do not assume.
+
+Phase 1 is the counter-example: schema validators, the index store, the
+messaging timeout and two security fixes landed as one commit. That should
+have been five. History before phase-3-indexer predates this rule and is
+left as written.
+
 ## Current status
 
 - **Phase 0 complete.** Scaffold, build script (`build.mjs`, esbuild), lint security rules, vitest, manifest, icons, TR/EN locales, CI and ADR-0001 are all in place and green.
