@@ -9,10 +9,22 @@ export interface FakeStorage {
   data: Record<string, unknown>;
   /** Set to make every call reject, for the fail-open paths. */
   failing: boolean;
+  /** Tabs chrome.tabs.query will report. */
+  tabs: { id?: number; url?: string }[];
+  /** Replies chrome.tabs.sendMessage gives; throws when null. */
+  tabResponse: unknown;
+  /** Messages sent to tabs, in order. */
+  sentToTabs: { tabId: number; message: unknown }[];
 }
 
 export function installFakeChrome(): FakeStorage {
-  const state: FakeStorage = { data: {}, failing: false };
+  const state: FakeStorage = {
+    data: {},
+    failing: false,
+    tabs: [],
+    tabResponse: null,
+    sentToTabs: [],
+  };
 
   const guard = async (): Promise<void> => {
     if (state.failing) throw new Error('storage unavailable');
@@ -39,9 +51,21 @@ export function installFakeChrome(): FakeStorage {
     },
   };
 
+  const tabs = {
+    async query(): Promise<{ id?: number; url?: string }[]> {
+      return state.tabs;
+    },
+    async sendMessage(tabId: number, message: unknown): Promise<unknown> {
+      state.sentToTabs.push({ tabId, message });
+      if (state.tabResponse === null) throw new Error('no receiving end');
+      return state.tabResponse;
+    },
+  };
+
   vi.stubGlobal('chrome', {
     runtime: { id: 'test-extension-id' },
     storage: { local },
+    tabs,
   });
 
   return state;

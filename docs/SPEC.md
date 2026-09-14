@@ -293,7 +293,8 @@ level with `complete:false`.
 
 - Sequential requests, concurrency 1. Parallel fetching is forbidden.
 - **Minimum 400 ms** wait between requests.
-- On an error or a 429, exponential backoff: 1s → 2s → 4s → 8s, max 4 attempts, then give
+- On an error or a 429, exponential backoff: **four attempts with three delays**,
+  1s → 2s → 4s, then give
   up and **save the partial index with `complete:false`.** The partial index is still
   used; a missing video is not hidden, and the wrong video is not hidden.
 - Hard ceiling per playlist: 200 continuation pages.

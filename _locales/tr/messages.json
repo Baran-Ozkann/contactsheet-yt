@@ -13,6 +13,8 @@
     "placeholders": { "count": { "content": "$1", "example": "3" } }
   },
   "popupPhaseNote": { "message": "Arayüz Faz 5'te uygulanacak." },
+  "playlistWatchLater": { "message": "Daha sonra izle" },
+  "playlistLiked":     { "message": "Beğenilen videolar" },
   "actionRefresh":  { "message": "Yenile" },
   "actionRefreshing": { "message": "Yenileniyor" }
 }
