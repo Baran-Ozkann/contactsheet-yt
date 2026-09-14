@@ -1,4 +1,5 @@
-import { safeJsonParse } from '../core/schema.js';
+import { MAX_PARSE_DEPTH, MAX_VIDEO_IDS_PER_PLAYLIST, safeJsonParse } from '../core/schema.js';
+import { isVideoId, type VideoId } from '../core/types.js';
 
 /**
  * YouTube data access (spec §4, ADR-0002).
@@ -90,4 +91,61 @@ export function extractClientConfig(html: string): ClientConfig | null {
   const clientVersion = CLIENT_VERSION_RE.exec(html)?.[1];
   if (!apiKey || !clientVersion) return null;
   return { apiKey, clientVersion };
+}
+
+/**
+ * Collects the video ids in a playlist payload.
+ *
+ * ADR-0002: collect by SHAPE, never by field name. YouTube runs two render
+ * paths in parallel and both must be supported:
+ *
+ *   new — an object carrying contentType LOCKUP_CONTENT_TYPE_VIDEO + contentId
+ *   old — an object under a `playlistVideoRenderer` key, carrying videoId
+ *
+ * Harvesting every field named `videoId` is forbidden and actively wrong:
+ * `addedVideoId`, `removedVideoId` and `animationActivationTargetId` all hold
+ * 11-character ids on the very same page, and they describe button actions
+ * rather than playlist contents. In the ADR measurement six different keys each
+ * carried 100 ids; collecting blindly produces a set that hides wrong videos.
+ *
+ * Order is playlist order, which is what a partial index should truncate.
+ */
+export function extractVideoIds(data: unknown, cap: number = MAX_VIDEO_IDS_PER_PLAYLIST): VideoId[] {
+  const found: VideoId[] = [];
+  const seen = new Set<VideoId>();
+
+  const take = (candidate: unknown): void => {
+    if (!isVideoId(candidate) || seen.has(candidate)) return;
+    seen.add(candidate);
+    found.push(candidate);
+  };
+
+  const walk = (node: unknown, depth: number): void => {
+    if (found.length >= cap) return;
+    if (node === null || typeof node !== 'object') return;
+    if (depth >= MAX_PARSE_DEPTH) return;
+
+    if (Array.isArray(node)) {
+      for (const item of node) walk(item, depth + 1);
+      return;
+    }
+
+    const record = node as Record<string, unknown>;
+
+    // New shape. Keyed on the marker field, so it matches wherever the lockup
+    // sits rather than depending on the parent property name.
+    if (record.contentType === 'LOCKUP_CONTENT_TYPE_VIDEO') take(record.contentId);
+
+    // Old shape. Here the renderer name IS the discriminator — a bare object
+    // carrying `videoId` is exactly the blind harvest the ADR forbids.
+    const legacy = record.playlistVideoRenderer;
+    if (legacy !== null && typeof legacy === 'object') {
+      take((legacy as Record<string, unknown>).videoId);
+    }
+
+    for (const value of Object.values(record)) walk(value, depth + 1);
+  };
+
+  walk(data, 0);
+  return found;
 }
