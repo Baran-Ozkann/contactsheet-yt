@@ -26,7 +26,7 @@ Testing in Chrome: `chrome://extensions` → Developer mode → Load unpacked �
 2. Every YouTube request is made from the content script, on the `www.youtube.com` origin (cookies are sent automatically, so no `cookies` permission is needed). The price: syncing only works while a YouTube tab is open.
 3. The popup does no work of its own; it asks the service worker for everything by message.
 
-Capability layers (spec §4.0): L0 playlist cards (no network) · L1 first page · L2 continuation pages · L3 WL toggle signal. The lower layers keep working even when the ones above them fail.
+Capability layers (spec §4.0): L0 playlist cards (no network) · L1 first page · L2 continuation pages. The lower layers keep working even when the ones above them fail. L3 (WL toggle signal) was ruled out by ADR-0002 — homepage cards carry no WL membership, so WL is covered by L1/L2 like any other playlist.
 
 ## Immutable rules
 

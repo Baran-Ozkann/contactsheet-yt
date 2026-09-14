@@ -72,6 +72,7 @@ at page-1 level with `complete:false`.
 - **Path 4 (hidden iframe) is not needed.** It was moved to `docs/BACKLOG.md`, to be
   revived only if Path 2 breaks permanently.
 - Layers L0/L1/L2 stand unchanged. L2 is now verified.
+- *Added later:* the "Spec §7 rule 15" referred to above is the **old** rule 15, which required signature computation to be isolated. Acting on this ADR, rule 15 was rewritten as the prohibition itself ("Cookies are never read"). The reference is kept as written for the historical record.
 
 ## Risks
 
