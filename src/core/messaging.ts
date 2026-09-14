@@ -33,3 +33,48 @@ export function isMessage(value: unknown): value is Message {
 export function isTrustedSender(sender: chrome.runtime.MessageSender): boolean {
   return sender.id === chrome.runtime.id;
 }
+
+/** Spec §2.3 — no message may leave a caller waiting forever. */
+export const MESSAGE_TIMEOUT_MS = 5_000;
+
+/**
+ * Resolves to `fallback` if `promise` has not settled in time, and on rejection.
+ * A stalled or dead service worker must never block the filter, so the caller
+ * always receives a value rather than an exception (NFR-04).
+ */
+export function withTimeout<T>(
+  promise: Promise<T>,
+  fallback: T,
+  timeoutMs: number = MESSAGE_TIMEOUT_MS,
+): Promise<T> {
+  return new Promise<T>((resolve) => {
+    let settled = false;
+    const finish = (value: T): void => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve(value);
+    };
+    const timer = setTimeout(() => finish(fallback), timeoutMs);
+    promise.then(
+      (value) => finish(value),
+      () => finish(fallback),
+    );
+  });
+}
+
+/**
+ * The only way any context should talk to the service worker: typed in, bounded
+ * in time, and never throwing. `undefined` means "no usable answer" — treat it
+ * as a reason to do nothing, never as a reason to hide.
+ */
+export async function sendMessage(
+  message: Message,
+  timeoutMs: number = MESSAGE_TIMEOUT_MS,
+): Promise<unknown> {
+  return withTimeout(
+    Promise.resolve().then(() => chrome.runtime.sendMessage(message) as Promise<unknown>),
+    undefined,
+    timeoutMs,
+  );
+}
