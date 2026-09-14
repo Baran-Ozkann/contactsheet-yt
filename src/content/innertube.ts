@@ -149,3 +149,55 @@ export function extractVideoIds(data: unknown, cap: number = MAX_VIDEO_IDS_PER_P
   walk(data, 0);
   return found;
 }
+
+/** Tokens are opaque, but bounded — a page should not hand us a megabyte. */
+const MAX_TOKEN_LENGTH = 4096;
+
+/**
+ * Ordered continuation-token candidates, best first.
+ *
+ * ADR-0002: `continuationCommand.token` occurs in more than one place and only
+ * one of them returns content — in the measurement the other came back with
+ * just {responseContext, trackingParams}. The one that works sits under
+ * `continuationItemViewModel`, in the same section as the item list, so those
+ * are ranked first.
+ *
+ * The caller tries them in order and keeps the first that yields videos; there
+ * is no way to tell them apart without asking.
+ */
+export function extractContinuationTokens(data: unknown): string[] {
+  const preferred: string[] = [];
+  const fallback: string[] = [];
+  const seen = new Set<string>();
+
+  const take = (candidate: unknown, isPreferred: boolean): void => {
+    if (typeof candidate !== 'string') return;
+    if (candidate.length === 0 || candidate.length > MAX_TOKEN_LENGTH) return;
+    if (seen.has(candidate)) return;
+    seen.add(candidate);
+    (isPreferred ? preferred : fallback).push(candidate);
+  };
+
+  const walk = (node: unknown, depth: number, inPreferredSubtree: boolean): void => {
+    if (node === null || typeof node !== 'object') return;
+    if (depth >= MAX_PARSE_DEPTH) return;
+
+    if (Array.isArray(node)) {
+      for (const item of node) walk(item, depth + 1, inPreferredSubtree);
+      return;
+    }
+
+    const record = node as Record<string, unknown>;
+    const command = record.continuationCommand;
+    if (command !== null && typeof command === 'object') {
+      take((command as Record<string, unknown>).token, inPreferredSubtree);
+    }
+
+    for (const [key, value] of Object.entries(record)) {
+      walk(value, depth + 1, inPreferredSubtree || key === 'continuationItemViewModel');
+    }
+  };
+
+  walk(data, 0, false);
+  return [...preferred, ...fallback];
+}
