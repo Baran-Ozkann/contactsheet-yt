@@ -19,6 +19,18 @@ Walk through this end to end at the close of every phase. Tick each item and rec
 > signed-out behaviour, the narrow-window and alternate-layout variants, and
 > teardown residue after removing the extension. Verified in jsdom only.
 
+## Popup (after Phase 5)
+- [x] Refresh drives the worker path and an index lands in storage — 2026-09-14, index:WL with 49 ids
+- [x] Manual add works — 2026-09-14, a private playlist indexed 32 videos
+- [x] Keyboard: Tab between rows, Space toggles, amber focus ring visible — 2026-09-14
+- [ ] The cross stays inside its row and the title reads through it
+- [ ] Rows visibly separate from one another
+- [ ] A synced playlist shows its name, not its id
+- [ ] A fully indexed playlist is not labelled partial
+- [ ] A long title or id truncates instead of widening the row
+- [ ] First open shows the explainer line and the unexposed frames
+- [ ] Export writes contactsheet-settings-YYYYMMDD.json; import restores it
+
 ## Edge cases
 - [ ] Signed out: nothing is hidden, no errors
 - [ ] With no playlists selected, the homepage is unchanged
