@@ -2,6 +2,7 @@ import {
   extractClientConfig,
   extractContinuationTokens,
   extractPlaylistTitle,
+  extractTitleFromHtml,
   extractVideoIds,
   extractYtInitialData,
   fetchContinuation,
@@ -108,7 +109,9 @@ export async function indexPlaylist(
   const page1 = extractYtInitialData(html);
   if (page1 === undefined) return finish(false, 0);
 
-  title = extractPlaylistTitle(page1);
+  // The JSON shapes are inferred and demonstrably miss on some real responses,
+  // so the document title is the fallback rather than giving up to the id.
+  title = extractPlaylistTitle(page1) ?? extractTitleFromHtml(html);
   absorb(extractVideoIds(page1));
   options.onProgress?.({ playlistId, videoCount: videoIds.length, pages: 0 });
 

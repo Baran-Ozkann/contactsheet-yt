@@ -266,13 +266,19 @@ export async function fetchContinuation(
 }
 
 /**
- * Best-effort playlist title, for display only (spec §4.1). It is never used
- * for matching, and the popup falls back to showing the id, so an unrecognised
- * shape is harmless rather than a failure. Shapes here are not measured.
+ * Playlist title, for display only (spec §4.1). Never used for matching.
+ *
+ * The InnerTube paths below are inferred, not measured — a manually added
+ * playlist synced 32 videos on 2026-09-14 and still showed its id, so at least
+ * one real response matches none of them. They are kept because they cost
+ * nothing and may match some layouts, but the reliable source is the document
+ * title; see extractTitleFromHtml.
  */
 export function extractPlaylistTitle(data: unknown): string | null {
   const candidates = [
     ['header', 'playlistHeaderRenderer', 'title', 'simpleText'],
+    ['header', 'playlistHeaderRenderer', 'title', 'runs', '0', 'text'],
+    ['header', 'pageHeaderRenderer', 'pageTitle'],
     ['metadata', 'playlistMetadataRenderer', 'title'],
     ['microformat', 'microformatDataRenderer', 'title'],
   ];
@@ -286,6 +292,48 @@ export function extractPlaylistTitle(data: unknown): string | null {
   }
   return null;
 }
+
+const TITLE_TAG = /<title[^>]*>([\s\S]*?)<\/title>/i;
+const ENTITIES: Record<string, string> = {
+  amp: '&',
+  lt: '<',
+  gt: '>',
+  quot: '"',
+  '#39': "'",
+  apos: "'",
+  nbsp: ' ',
+};
+
+function decodeEntities(text: string): string {
+  return text.replace(/&(#x?[0-9a-f]+|[a-z]+);/gi, (whole, name: string) => {
+    const known = ENTITIES[name.toLowerCase()];
+    if (known !== undefined) return known;
+    const numeric = /^#(x?)([0-9a-f]+)$/i.exec(name);
+    if (!numeric) return whole;
+    const code = parseInt(numeric[2] ?? '', numeric[1] ? 16 : 10);
+    return Number.isFinite(code) && code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : whole;
+  });
+}
+
+/**
+ * The playlist title from the document's own <title> element.
+ *
+ * This is the dependable path. The <title> of a playlist page is
+ * "<name> - YouTube", which is observable without guessing at InnerTube field
+ * names and has been stable across every layout variant YouTube has shipped.
+ * Used as the fallback when the JSON shapes miss.
+ */
+export function extractTitleFromHtml(html: string): string | null {
+  const raw = TITLE_TAG.exec(html)?.[1];
+  if (raw === undefined) return null;
+  const decoded = decodeEntities(raw).replace(/\s+/g, ' ').trim();
+  // Drop the site suffix; a playlist genuinely named "YouTube" keeps its name
+  // because the suffix only ever appears after a separator.
+  const withoutSuffix = decoded.replace(/\s*[-–—|]\s*YouTube\s*$/i, '').trim();
+  if (withoutSuffix === '') return null;
+  return withoutSuffix.slice(0, 200);
+}
+
 
 export interface DiscoveredPlaylist {
   id: string;

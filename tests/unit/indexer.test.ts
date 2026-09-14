@@ -255,3 +255,32 @@ describe('indexPlaylist — cancellation', () => {
     expect(result.videoIds).toEqual([videoId(1)]);
   });
 });
+
+describe('indexPlaylist — title resolution', () => {
+  it('falls back to the document title when no JSON shape matches', async () => {
+    // The 2026-09-14 regression: a real sync indexed its videos and still
+    // showed the playlist id, because every InnerTube shape missed.
+    const data = page([videoId(1)]);
+    server.pageHtml = html(data).replace(
+      '<html>',
+      '<html><head><title>Kayıt listesi - YouTube</title></head>',
+    );
+    const result = await indexPlaylist('PLabc123', { sleep });
+    expect(result.title).toBe('Kayıt listesi');
+  });
+
+  it('prefers a JSON title when one is present', async () => {
+    const data = page([videoId(1)]) as Record<string, unknown>;
+    data.metadata = { playlistMetadataRenderer: { title: 'From JSON' } };
+    server.pageHtml = html(data).replace(
+      '<html>',
+      '<html><head><title>From HTML - YouTube</title></head>',
+    );
+    expect((await indexPlaylist('PLabc123', { sleep })).title).toBe('From JSON');
+  });
+
+  it('leaves the title null when neither source has one', async () => {
+    server.pageHtml = html(page([videoId(1)]));
+    expect((await indexPlaylist('PLabc123', { sleep })).title).toBeNull();
+  });
+});
