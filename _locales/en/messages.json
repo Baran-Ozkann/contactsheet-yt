@@ -24,6 +24,9 @@
       }
     }
   },
+  "popupExplainer": {
+    "message": "Videos from the playlists you choose stop appearing on your homepage."
+  },
   "popupConnecting": {
     "message": "Connecting…"
   },

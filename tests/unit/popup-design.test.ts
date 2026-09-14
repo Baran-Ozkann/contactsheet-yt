@@ -128,6 +128,24 @@ describe('spec §6 required properties', () => {
     expect(block).toMatch(/overflow:\s*hidden/);
   });
 
+  it('builds the empty state from frames, not an illustration (item 7)', () => {
+    expect(html).toMatch(/id="ghost-strip"/);
+    expect(css).toMatch(/\.ghost\s*\{/);
+    // A bar where a title would sit, and a mark already on one frame at a
+    // fraction of its strength — boxes and rules only.
+    expect(css).toMatch(/\.ghost-bar\s*\{/);
+    expect(css).toMatch(/\.ghost \.cross path\s*\{[^}]*stroke-opacity:\s*0?\.22/);
+    expect(css).not.toMatch(/\.ghost[^{]*\{[^}]*border-radius/);
+  });
+
+  it('uses palette tokens for hover rather than a stray hex', () => {
+    const hovers = css.match(/:hover[^{]*\{[^}]*\}/g) ?? [];
+    expect(hovers.length).toBeGreaterThan(0);
+    for (const block of hovers) {
+      expect(block).not.toMatch(/#[0-9a-f]{3,6}/i);
+    }
+  });
+
   it('honours prefers-reduced-motion (§6.5)', () => {
     expect(css).toMatch(/@media\s*\(prefers-reduced-motion:\s*reduce\)/);
   });

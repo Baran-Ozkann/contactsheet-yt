@@ -29,6 +29,9 @@ const nodes = {
   addButton: el<HTMLButtonElement>('add-button'),
   refresh: el<HTMLButtonElement>('refresh'),
   syncStatus: el<HTMLSpanElement>('sync-status'),
+  empty: el<HTMLElement>('empty'),
+  emptyCopy: el<HTMLParagraphElement>('empty-copy'),
+  ghostStrip: el<HTMLDivElement>('ghost-strip'),
   live: el<HTMLParagraphElement>('live'),
   sprocket: document.getElementById('sprocket') as unknown as SVGSVGElement,
 };
@@ -157,14 +160,35 @@ function buildRow(view: PlaylistView, position: number): HTMLButtonElement {
   return row;
 }
 
-function renderMessage(state: PopupState): void {
-  if (state.playlists.length === 0) {
-    nodes.message.textContent = t('popupEmpty');
-    nodes.message.hidden = false;
-    return;
+/**
+ * Three unexposed frames, one already carrying a faint mark. Shown once, on
+ * first open, so the gesture is demonstrated rather than explained.
+ */
+function buildGhostStrip(): void {
+  if (nodes.ghostStrip.childElementCount > 0) return;
+  for (let i = 0; i < 3; i += 1) {
+    const ghost = document.createElement('div');
+    ghost.className = 'ghost';
+
+    const no = document.createElement('span');
+    no.className = 'ghost-no';
+    no.textContent = String(i + 1).padStart(2, '0');
+
+    const bar = document.createElement('span');
+    bar.className = 'ghost-bar';
+
+    ghost.append(no, bar);
+    if (i === 0) ghost.append(buildCross());
+    nodes.ghostStrip.append(ghost);
   }
-  nodes.message.hidden = true;
-  nodes.message.textContent = '';
+}
+
+function renderEmpty(state: PopupState): void {
+  const isEmpty = state.playlists.length === 0;
+  if (isEmpty) buildGhostStrip();
+  nodes.empty.hidden = !isEmpty;
+  nodes.rows.hidden = isEmpty;
+  nodes.emptyCopy.textContent = isEmpty ? t('popupEmpty') : '';
 }
 
 function formatSyncStatus(state: PopupState): string {
@@ -179,13 +203,16 @@ function formatSyncStatus(state: PopupState): string {
 
 function render(state: PopupState): void {
   nodes.master.setAttribute('aria-checked', String(state.enabled));
-  nodes.subtitle.textContent = t(
-    'popupSubtitle',
-    num(state.hiddenPlaylistCount),
-    num(state.hiddenVideoCount),
-  );
 
-  renderMessage(state);
+  // Teaching on first open, out of the way afterwards: the line says what the
+  // extension does while there is nothing to count, and becomes the count once
+  // there is.
+  nodes.subtitle.textContent =
+    state.playlists.length === 0
+      ? t('popupExplainer')
+      : t('popupSubtitle', num(state.hiddenPlaylistCount), num(state.hiddenVideoCount));
+
+  renderEmpty(state);
 
   nodes.rows.textContent = '';
   state.playlists.forEach((view, i) => nodes.rows.append(buildRow(view, i + 1)));

@@ -32,6 +32,13 @@
 
       <p class="message" id="message" hidden></p>
 
+      <!-- First open only: unexposed frames waiting to be marked. Built in JS
+           so the strip is markup, not an illustration (spec §6 forbids those). -->
+      <section class="empty" id="empty" hidden>
+        <div class="ghost-strip" id="ghost-strip" aria-hidden="true"></div>
+        <p class="empty-copy" id="empty-copy"></p>
+      </section>
+
       <div class="rows" id="rows"></div>
 
       <div class="add">

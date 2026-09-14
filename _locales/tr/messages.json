@@ -24,6 +24,9 @@
       }
     }
   },
+  "popupExplainer": {
+    "message": "Seçtiğin listelerdeki videolar ana sayfada görünmez olur."
+  },
   "popupConnecting": {
     "message": "Bağlanıyor…"
   },
