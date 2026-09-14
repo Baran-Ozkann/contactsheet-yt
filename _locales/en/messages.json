@@ -1,20 +1,139 @@
 {
-  "extName":        { "message": "Contact Sheet" },
-  "extDescription": { "message": "Hides videos from playlists you choose on the YouTube homepage." },
-  "popupTitle":     { "message": "Hidden from your homepage" },
-  "popupConnecting": { "message": "Connecting…" },
-  "popupEmpty":     { "message": "No playlists read yet. Open YouTube and we'll fetch your lists." },
-  "popupNoTab":     { "message": "Syncing needs an open YouTube tab." },
-  "popupError":     { "message": "Couldn't fetch your playlists. YouTube's response looked different. Try again." },
-  "popupSettingsError": { "message": "Couldn't read your settings. Reload the extension." },
-  "popupBackgroundError": { "message": "Couldn't reach the background service." },
+  "extName": {
+    "message": "Contact Sheet"
+  },
+  "extDescription": {
+    "message": "Hides videos from playlists you choose on the YouTube homepage."
+  },
+  "popupTitle": {
+    "message": "Hidden from your homepage"
+  },
+  "popupMasterLabel": {
+    "message": "Turn hiding on or off"
+  },
+  "popupSubtitle": {
+    "message": "$PLAYLISTS$ playlists, $VIDEOS$ videos",
+    "placeholders": {
+      "playlists": {
+        "content": "$1",
+        "example": "3"
+      },
+      "videos": {
+        "content": "$2",
+        "example": "1,284"
+      }
+    }
+  },
+  "popupConnecting": {
+    "message": "Connecting…"
+  },
+  "popupEmpty": {
+    "message": "No playlists read yet. Open YouTube and we'll fetch your lists."
+  },
+  "popupNoTab": {
+    "message": "Syncing needs an open YouTube tab."
+  },
+  "popupError": {
+    "message": "Couldn't fetch your playlists. YouTube's response looked different. Try again."
+  },
+  "popupPartial": {
+    "message": "This playlist is partly indexed ($INDEXED$/$TOTAL$). Refresh.",
+    "placeholders": {
+      "indexed": {
+        "content": "$1",
+        "example": "412"
+      },
+      "total": {
+        "content": "$2",
+        "example": "679"
+      }
+    }
+  },
+  "popupLayerCardOnly": {
+    "message": "Hiding the playlist card only. Refresh to reach its videos."
+  },
+  "popupRowVideos": {
+    "message": "$COUNT$ videos",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "412"
+      }
+    }
+  },
+  "popupSettingsError": {
+    "message": "Couldn't read your settings. Reload the extension."
+  },
+  "popupBackgroundError": {
+    "message": "Couldn't reach the background service."
+  },
   "popupSavedCount": {
     "message": "Saved playlists: $COUNT$",
-    "placeholders": { "count": { "content": "$1", "example": "3" } }
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
   },
-  "popupPhaseNote": { "message": "The interface arrives in Phase 5." },
-  "playlistWatchLater": { "message": "Watch later" },
-  "playlistLiked":     { "message": "Liked videos" },
-  "actionRefresh":  { "message": "Refresh" },
-  "actionRefreshing": { "message": "Refreshing" }
+  "popupPhaseNote": {
+    "message": "The interface arrives in Phase 5."
+  },
+  "popupAddLabel": {
+    "message": "Playlist link"
+  },
+  "popupAddPlaceholder": {
+    "message": "youtube.com/playlist?list=…"
+  },
+  "popupAddAction": {
+    "message": "Add"
+  },
+  "popupAddInvalid": {
+    "message": "That isn't a playlist link. Paste the playlist's URL."
+  },
+  "popupSyncing": {
+    "message": "Refreshing"
+  },
+  "popupLastSync": {
+    "message": "Last sync $TIME$",
+    "placeholders": {
+      "time": {
+        "content": "$1",
+        "example": "14:32"
+      }
+    }
+  },
+  "popupNeverSynced": {
+    "message": "Not synced yet"
+  },
+  "popupAnnounceHidden": {
+    "message": "Playlist hidden"
+  },
+  "popupAnnounceShown": {
+    "message": "Playlist showing"
+  },
+  "popupAnnounceAdded": {
+    "message": "Playlist added"
+  },
+  "popupAnnounceEnabled": {
+    "message": "Hiding on"
+  },
+  "popupAnnounceDisabled": {
+    "message": "Hiding off"
+  },
+  "playlistWatchLater": {
+    "message": "Watch later"
+  },
+  "playlistLiked": {
+    "message": "Liked videos"
+  },
+  "actionRefresh": {
+    "message": "Refresh"
+  },
+  "actionRefreshing": {
+    "message": "Refreshing"
+  },
+  "actionRefreshed": {
+    "message": "Refreshed"
+  }
 }

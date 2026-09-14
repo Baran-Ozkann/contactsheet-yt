@@ -1,20 +1,139 @@
 {
-  "extName":        { "message": "Contact Sheet" },
-  "extDescription": { "message": "Seçtiğin oynatma listelerindeki videoları YouTube ana sayfasından gizler." },
-  "popupTitle":     { "message": "Ana sayfada gizlenenler" },
-  "popupConnecting": { "message": "Bağlanıyor…" },
-  "popupEmpty":     { "message": "Henüz liste okunmadı. YouTube'u aç, listelerini buradan getirelim." },
-  "popupNoTab":     { "message": "Senkronizasyon için açık bir YouTube sekmesi gerekiyor." },
-  "popupError":     { "message": "Listeler alınamadı. YouTube yanıtı beklenenden farklı. Tekrar dene." },
-  "popupSettingsError": { "message": "Ayarlar okunamadı. Eklentiyi yeniden yükle." },
-  "popupBackgroundError": { "message": "Arka plan servisine ulaşılamadı." },
+  "extName": {
+    "message": "Contact Sheet"
+  },
+  "extDescription": {
+    "message": "Seçtiğin oynatma listelerindeki videoları YouTube ana sayfasından gizler."
+  },
+  "popupTitle": {
+    "message": "Ana sayfada gizlenenler"
+  },
+  "popupMasterLabel": {
+    "message": "Gizlemeyi aç veya kapat"
+  },
+  "popupSubtitle": {
+    "message": "$PLAYLISTS$ liste, $VIDEOS$ video",
+    "placeholders": {
+      "playlists": {
+        "content": "$1",
+        "example": "3"
+      },
+      "videos": {
+        "content": "$2",
+        "example": "1.284"
+      }
+    }
+  },
+  "popupConnecting": {
+    "message": "Bağlanıyor…"
+  },
+  "popupEmpty": {
+    "message": "Henüz liste okunmadı. YouTube'u aç, listelerini buradan getirelim."
+  },
+  "popupNoTab": {
+    "message": "Senkronizasyon için açık bir YouTube sekmesi gerekiyor."
+  },
+  "popupError": {
+    "message": "Listeler alınamadı. YouTube yanıtı beklenenden farklı. Tekrar dene."
+  },
+  "popupPartial": {
+    "message": "Bu liste kısmen indekslendi ($INDEXED$/$TOTAL$). Yenile.",
+    "placeholders": {
+      "indexed": {
+        "content": "$1",
+        "example": "412"
+      },
+      "total": {
+        "content": "$2",
+        "example": "679"
+      }
+    }
+  },
+  "popupLayerCardOnly": {
+    "message": "Yalnızca liste kartı gizleniyor. Videolar için yenile."
+  },
+  "popupRowVideos": {
+    "message": "$COUNT$ video",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "412"
+      }
+    }
+  },
+  "popupSettingsError": {
+    "message": "Ayarlar okunamadı. Eklentiyi yeniden yükle."
+  },
+  "popupBackgroundError": {
+    "message": "Arka plan servisine ulaşılamadı."
+  },
   "popupSavedCount": {
     "message": "Kayıtlı liste: $COUNT$",
-    "placeholders": { "count": { "content": "$1", "example": "3" } }
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
   },
-  "popupPhaseNote": { "message": "Arayüz Faz 5'te uygulanacak." },
-  "playlistWatchLater": { "message": "Daha sonra izle" },
-  "playlistLiked":     { "message": "Beğenilen videolar" },
-  "actionRefresh":  { "message": "Yenile" },
-  "actionRefreshing": { "message": "Yenileniyor" }
+  "popupPhaseNote": {
+    "message": "Arayüz Faz 5'te uygulanacak."
+  },
+  "popupAddLabel": {
+    "message": "Oynatma listesi bağlantısı"
+  },
+  "popupAddPlaceholder": {
+    "message": "youtube.com/playlist?list=…"
+  },
+  "popupAddAction": {
+    "message": "Ekle"
+  },
+  "popupAddInvalid": {
+    "message": "Bu bir oynatma listesi bağlantısı değil. Listenin URL'sini yapıştır."
+  },
+  "popupSyncing": {
+    "message": "Yenileniyor"
+  },
+  "popupLastSync": {
+    "message": "Son senkron $TIME$",
+    "placeholders": {
+      "time": {
+        "content": "$1",
+        "example": "14:32"
+      }
+    }
+  },
+  "popupNeverSynced": {
+    "message": "Henüz senkronlanmadı"
+  },
+  "popupAnnounceHidden": {
+    "message": "Liste gizlendi"
+  },
+  "popupAnnounceShown": {
+    "message": "Liste gösteriliyor"
+  },
+  "popupAnnounceAdded": {
+    "message": "Liste eklendi"
+  },
+  "popupAnnounceEnabled": {
+    "message": "Gizleme açık"
+  },
+  "popupAnnounceDisabled": {
+    "message": "Gizleme kapalı"
+  },
+  "playlistWatchLater": {
+    "message": "Daha sonra izle"
+  },
+  "playlistLiked": {
+    "message": "Beğenilen videolar"
+  },
+  "actionRefresh": {
+    "message": "Yenile"
+  },
+  "actionRefreshing": {
+    "message": "Yenileniyor"
+  },
+  "actionRefreshed": {
+    "message": "Yenilendi"
+  }
 }
