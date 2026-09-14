@@ -1,71 +1,71 @@
 # Contact Sheet
 
-YouTube ana sayfasında, senin seçtiğin oynatma listelerindeki videoları gizler.
+Hides videos from the playlists you choose on the YouTube homepage.
 
-"Daha sonra izle" listende 400 video birikmişse ana sayfa onları tekrar tekrar önerir. Bu eklentide listeyi işaretlersin, o listedeki videolar ve listenin kendisi ana sayfada görünmez olur.
+When 400 videos have piled up in your "Watch later" list, the homepage keeps recommending them back to you. This extension lets you mark a playlist, and both the videos in it and the playlist itself disappear from the homepage.
 
-> **Durum: geliştirme aşamasında (v0.1.0, Faz 0).** Henüz gizleme yapmıyor. Yol haritası için `docs/contactsheet-yt-spec.md`.
+> **Status: under development (v0.1.0, Phase 0).** It does not hide anything yet. See `docs/SPEC.md` for the roadmap.
 
-## Ne yapar
+## What it does
 
-- Seçilen listelerdeki videoları ana sayfa akışından gizler.
-- Seçilen listelerin kartlarını ve raflarını gizler.
-- Her şey yerelde çalışır: sunucu yok, hesap yok, telemetri yok.
+- Hides videos from the selected playlists in the homepage feed.
+- Hides the cards and shelves belonging to the selected playlists.
+- Runs entirely on your machine: no server, no account, no telemetry.
 
-## Ne yapmaz
+## What it does not do
 
-- YouTube hesabında hiçbir değişiklik yapmaz. Video silmez, listeden çıkarmaz.
-- Ana sayfa dışındaki sayfalara dokunmaz (abonelikler, arama, izleme sayfası).
-- Reklam engellemez, video indirmez.
-- youtube.com dışında hiçbir adrese istek atmaz.
+- It never changes anything in your YouTube account. It does not delete videos or remove them from playlists.
+- It does not touch any page other than the homepage (subscriptions, search, watch page).
+- It does not block ads or download videos.
+- It sends no request to any address outside youtube.com.
 
-## Kısıtlar
+## Limitations
 
-- Oynatma listelerini okumak için YouTube'un kendi dahili uç noktaları kullanılır. Bunlar belgelenmiş bir API değildir; YouTube değiştirirse eklenti güncelleme gerektirir.
-- Senkronizasyon yalnızca **açık bir YouTube sekmesi varken** çalışır. Bu bilinçli bir tercih: böylece eklentinin çerez veya oturum bilgisi saklaması gerekmiyor.
-- Yalnızca Chrome / Edge (Manifest V3). Firefox portu yok.
+- Reading playlists relies on YouTube's own internal endpoints. These are not a documented API, so if YouTube changes them the extension will need an update.
+- Syncing works **only while a YouTube tab is open**. This is a deliberate trade-off: it means the extension never has to store cookies or session data.
+- Chrome / Edge only (Manifest V3). There is no Firefox port.
 
-## Kurulum (geliştirme)
+## Setup (development)
 
 ```bash
 npm ci
 npm run build
 ```
 
-Sonra Chrome'da:
+Then, in Chrome:
 
-1. `chrome://extensions` adresini aç.
-2. Sağ üstten **Geliştirici modu**'nu aç.
-3. **Paketlenmemiş öğe yükle** → bu klasördeki `dist/` klasörünü seç.
+1. Open `chrome://extensions`.
+2. Turn on **Developer mode** in the top right.
+3. **Load unpacked** → select the `dist/` folder inside this directory.
 
-Kod değiştirdiğinde `npm run build` çalıştır ve eklentiler sayfasındaki yenile simgesine bas.
+After changing code, run `npm run build` and hit the reload icon on the extensions page.
 
-## Komutlar
+## Commands
 
-| Komut | İş |
+| Command | What it does |
 |---|---|
-| `npm run build` | Geliştirme derlemesi → `dist/` |
-| `npm run build:prod` | Küçültülmüş derleme, debug logları çıkarılır |
-| `npm run zip` | Yayın paketi + SHA-256 → `dist-zip/` |
-| `npm run typecheck` | TypeScript denetimi |
-| `npm run lint` | ESLint (güvenlik kuralları dahil) |
-| `npm test` | Birim testleri |
-| `npm run check` | Hepsi birden |
+| `npm run build` | Development build → `dist/` |
+| `npm run build:prod` | Minified build, debug logs stripped |
+| `npm run zip` | Release package + SHA-256 → `dist-zip/` |
+| `npm run typecheck` | TypeScript check |
+| `npm run lint` | ESLint (including the security rules) |
+| `npm test` | Unit tests |
+| `npm run check` | All of the above |
 
-## Gizlilik
+## Privacy
 
-Eklenti şunları **yerelde** saklar: oynatma listesi kimlikleri, liste başlıkları, o listelerdeki video kimlikleri ve senkron zaman damgaları. Başka hiçbir şey saklanmaz ve hiçbir veri cihazından çıkmaz. Ayrıntı: `docs/PRIVACY.md`.
+The extension stores the following **locally**: playlist IDs, playlist titles, the video IDs in those playlists, and sync timestamps. Nothing else is stored, and no data ever leaves your device. Details: `docs/PRIVACY.md`.
 
-İstenen izinler:
+Permissions requested:
 
-| İzin | Neden |
+| Permission | Why |
 |---|---|
-| `storage` | Ayarlar ve video kimliği indeksi |
-| `alarms` | Periyodik senkronizasyon |
-| `https://www.youtube.com/*` | Ana sayfayı filtrelemek ve listeleri okumak |
+| `storage` | Settings and the video ID index |
+| `alarms` | Periodic syncing |
+| `https://www.youtube.com/*` | Filtering the homepage and reading playlists |
 
-`tabs`, `cookies`, `webRequest` ve `<all_urls>` izinleri **istenmez**.
+The `tabs`, `cookies`, `webRequest` and `<all_urls>` permissions are **not** requested.
 
-## Lisans
+## License
 
 MIT

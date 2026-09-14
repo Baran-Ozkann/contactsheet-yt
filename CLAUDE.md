@@ -1,103 +1,104 @@
 # CLAUDE.md
 
-Bu dosya her oturumun başında okunur. Kısa tutulmuştur; ayrıntı `docs/contactsheet-yt-spec.md` içindedir.
+This file is read at the start of every session. It is deliberately short; the detail lives in `docs/SPEC.md`.
 
-## Proje
+## The project
 
-Chrome/Edge MV3 eklentisi. Kullanıcının seçtiği YouTube oynatma listelerindeki videoları ve o listelerin kartlarını **YouTube ana sayfasından** gizler. Sunucusuz, hesapsız, telemetrisiz.
+A Chrome/Edge MV3 extension. It hides the videos from playlists the user has selected — and the cards for those playlists — **on the YouTube homepage**. No server, no account, no telemetry.
 
-Tek doğruluk kaynağı: **`docs/contactsheet-yt-spec.md`**. Bu dosya ile spec çelişirse spec kazanır. Spec'te olmayan özellik yazılmaz.
+Single source of truth: **`docs/SPEC.md`**. If this file and the spec disagree, the spec wins. Anything not in the spec does not get built.
 
-## Komutlar
+## Commands
 
 ```bash
-npm ci            # bağımlılıklar (npm install değil)
-npm run check     # typecheck + lint + test + build — commit öncesi zorunlu
-npm run build     # dist/ üretir, Chrome'a paketlenmemiş olarak yüklenir
-npm test          # birim testleri
-npm run zip       # yayın paketi + SHA-256
+npm ci            # dependencies (not npm install)
+npm run check     # typecheck + lint + test + build — mandatory before every commit
+npm run build     # produces dist/, loaded unpacked into Chrome
+npm test          # unit tests
+npm run zip       # release package + SHA-256
 ```
 
-Chrome'da test: `chrome://extensions` → Geliştirici modu → Paketlenmemiş öğe yükle → `dist/`.
+Testing in Chrome: `chrome://extensions` → Developer mode → Load unpacked → `dist/`.
 
-## Mimari — üç cümle
+## Architecture — in three sentences
 
-1. Service worker storage'ın **tek yazarıdır** ve ağa **hiç** çıkmaz.
-2. Tüm YouTube istekleri content script içinden, `www.youtube.com` origin'inde yapılır (çerezler otomatik gider, `cookies` izni gerekmez). Bedeli: senkron yalnızca açık bir YouTube sekmesi varken çalışır.
-3. Popup hiçbir iş yapmaz; her şeyi mesajla service worker'dan ister.
+1. The service worker is the **sole writer** to storage and **never** touches the network.
+2. Every YouTube request is made from the content script, on the `www.youtube.com` origin (cookies are sent automatically, so no `cookies` permission is needed). The price: syncing only works while a YouTube tab is open.
+3. The popup does no work of its own; it asks the service worker for everything by message.
 
-Yetenek katmanları (spec §4.0): K0 playlist kartları (ağ yok) · K1 ilk sayfa · K2 devam sayfaları · K3 WL toggle sinyali. Üsttekiler çökse bile alttakiler çalışmaya devam eder.
+Capability layers (spec §4.0): L0 playlist cards (no network) · L1 first page · L2 continuation pages · L3 WL toggle signal. The lower layers keep working even when the ones above them fail.
 
-## Değişmez kurallar
+## Immutable rules
 
-Bunlar tercih değil, sözleşmedir. İhlali fazın reddidir.
+These are not preferences, they are a contract. Breaking one means the phase is rejected.
 
-1. **Fail-open.** Şüphe varsa kart gösterilir. İndeks yoksa, bozuksa, istek başarısızsa hiçbir şey gizlenmez. "Emin değilsem gizle" mantığı yazılamaz.
-2. **İzin eklenmez.** `storage`, `alarms`, `https://www.youtube.com/*` dışına çıkmak açık onay ister. `tabs`, `cookies`, `webRequest`, `<all_urls>` istenmez.
-3. **Bağımlılık eklenmez.** Dev bağımlılığı bile önce gerekçesiyle sorulur. `dependencies` boş kalır.
-4. **`innerHTML` / `outerHTML` / `insertAdjacentHTML` / `eval` / `new Function` yok.** Lint zaten kırar; atlatılmaya çalışılmaz.
-5. **CSS seçici stringi yalnızca `src/content/selectors.ts` içinde bulunur.** Başka dosyada seçici görürsen taşı.
-6. **youtube.com dışına hiçbir istek yok.** Analitik, hata raporlama, güncelleme kontrolü, font CDN'i — hiçbiri.
-7. **YouTube hesabına yazan uç nokta çağrılmaz.** Sadece okuma.
-8. **`SAPISID` kilitli.** Yalnızca imza hesabı için, yalnızca istek anında okunur. Saklanmaz, loglanmaz, mesajla taşınmaz, hash dışında kullanılmaz. Tek dosyada izole.
-9. **Gerçek veri commit edilmez.** Kendi hesabından alınan ham yanıtlar, video kimlikleri, ekran görüntülerindeki liste adları temizlenir.
-10. **Production loglarında video kimliği veya URL parametresi bulunmaz.**
+1. **Fail open.** When in doubt, show the card. If the index is missing, corrupt, or a request fails, nothing gets hidden. "Hide it if I'm not sure" logic must never be written.
+2. **No new permissions.** Going beyond `storage`, `alarms` and `https://www.youtube.com/*` requires explicit approval. `tabs`, `cookies`, `webRequest` and `<all_urls>` are never requested.
+3. **No new dependencies.** Even a dev dependency has to be proposed with its justification first. `dependencies` stays empty.
+4. **No `innerHTML` / `outerHTML` / `insertAdjacentHTML` / `eval` / `new Function`.** Lint already fails on these; do not try to work around it.
+5. **CSS selector strings live only in `src/content/selectors.ts`.** If you see a selector in any other file, move it.
+6. **No requests outside youtube.com.** Analytics, error reporting, update checks, font CDNs — none of them.
+7. **No endpoint that writes to the YouTube account is ever called.** Reads only.
+8. **Cookies are never read.** ADR-0002 measured that the signature is unnecessary. `document.cookie` access and `SAPISIDHASH` computation do not enter the codebase.
+9. **Real data is never committed.** Raw responses from your own account, video IDs and playlist names visible in screenshots must be scrubbed.
+10. **Production logs contain no video IDs and no URL parameters.**
 
-## Çalışma biçimi
+## How we work
 
-- **Fazlar sırayla.** Faz atlama yok. Spec §9'daki kabul kriterleri karşılanmadan sonraki faza geçilmez.
-- **Belirsizlikte sor.** Özellikle YouTube DOM yapısı, InnerTube alan adları ve kimlik doğrulama davranışı hakkında **tahmin yürütme** — çalıştır, gör, yaz. Spike çıktısı olmadan Faz 3 tasarlanmaz.
-- **Kapsam genişletme yok.** İyi fikir `docs/BACKLOG.md`'ye yazılır, uygulanmaz.
-- **Her mimari karar ADR'ye:** `docs/adr/NNNN-baslik.md` — bağlam, seçenekler, karar, sonuç.
-- **Test aynı commit'te.** Ayrıştırıcı veya doğrulayıcı yazıyorsan testi yanında gelir.
-- **Yorum ekonomisi.** *Ne* yaptığını değil, *neden* öyle yaptığını yaz. Özellikle YouTube'a özgü tuhaflıklarda.
-- Konuşma dili Türkçe. Kod, commit mesajları, kod yorumları İngilizce. Arayüz metinleri `_locales` üzerinden.
+- **Phases in order.** No skipping. You do not move to the next phase until the acceptance criteria in spec §9 are met.
+- **Ask when unsure.** Do not guess — especially about YouTube's DOM structure, InnerTube field names and authentication behaviour. Run it, look at it, then write it. Phase 3 is not designed without spike output.
+- **No scope creep.** A good idea goes in `docs/BACKLOG.md`; it does not get implemented.
+- **Every architectural decision becomes an ADR:** `docs/adr/NNNN-title.md` — context, options, decision, consequences.
+- **Tests in the same commit.** If you write a parser or a validator, its test ships alongside it.
+- **Economical comments.** Write down *why* it is done that way, not *what* it does — especially for YouTube-specific quirks.
+- Everything in this repository — docs, code, comments, commit messages, phase reports — is written in English. User-facing interface strings go through `_locales`.
 
-## Faz protokolü
+## Phase protocol
 
-Her faz için sırayla:
+For each phase, in order:
 
-1. `git checkout -b phase-N-kisa-ad`
-2. Fazı uygula.
-3. `npm run check` — yeşil olmadan devam yok.
-4. Chrome'da elle doğrula (spec §8 / `docs/QA.md`).
+1. `git checkout -b phase-N-short-name`
+2. Implement the phase.
+3. `npm run check` — nothing proceeds until it is green.
+4. Verify by hand in Chrome (spec §8 / `docs/QA.md`).
 5. `git add -A && git commit` (Conventional Commits).
-6. **Push etme.** Raporu yaz ve dur.
+6. **Do not push.** Write the report and stop.
 
-Push'u ben yaparım. Sen rapor verir, onay beklersin.
+I do the pushing. You report and wait for approval.
 
-### Faz raporu formatı
+### Phase report format
 
 ```markdown
-## Faz N raporu — <ad>
+## Phase N report — <name>
 
-**Yapılanlar**
-- <madde> (`dosya/yolu.ts`)
+**What was done**
+- <item> (`path/to/file.ts`)
 
-**Kabul kriterleri**
-| Kriter | Durum | Kanıt |
+**Acceptance criteria**
+| Criterion | Status | Evidence |
 |---|---|---|
-| <spec'ten birebir kriter> | ✅ / ❌ | <test adı, ölçüm, ekran doğrulaması> |
+| <criterion, verbatim from the spec> | ✅ / ❌ | <test name, measurement, manual verification> |
 
-**Ölçümler**
-- Test: N geçti · Build: N KB · <faza özgü ölçüm>
+**Measurements**
+- Tests: N passed · Build: N KB · <phase-specific measurement>
 
-**Spec'ten sapmalar**
-- <sapma + gerekçe + hangi ADR'ye yazıldı> — yoksa "yok"
+**Deviations from the spec**
+- <deviation + rationale + which ADR records it> — or "none"
 
-**Bilinen eksikler**
-- <sonraki faza devredilen>
+**Known gaps**
+- <what is being carried into the next phase>
 
-**Önerilen commit**
+**Proposed commit**
 `feat: ...`
 
-**Onay bekleniyor:** Faz N+1'e geçebilir miyim?
+**Awaiting approval:** may I move on to Phase N+1?
 ```
 
-Rapor kısa olsun. Kabul kriterleri tablosunda ❌ varsa faz kapanmamıştır; onay isteme, eksiği bitir.
+Keep the report short. If there is a ❌ anywhere in the acceptance criteria table the phase is not closed; do not ask for approval, finish what is missing.
 
-## Mevcut durum
+## Current status
 
-- **Faz 0 tamamlandı.** İskelet, derleme betiği (`build.mjs`, esbuild), lint güvenlik kuralları, vitest, manifest, ikonlar, TR/EN locale, CI, ADR-0001 hazır ve yeşil.
-- `src/content/identify.ts` ve `src/core/playlist-input.ts` yazıldı ve test edildi.
-- **Sıradaki: Faz 1.** Ama önce `docs/spike/wl-check.js` gerçek hesapta çalıştırılmalı (Faz 2 karar kapısı); çıktısı olmadan Faz 3'ün tasarımı belirsizdir.
+- **Phase 0 complete.** Scaffold, build script (`build.mjs`, esbuild), lint security rules, vitest, manifest, icons, TR/EN locales, CI and ADR-0001 are all in place and green.
+- **Phase 2 decision gate passed.** The spike was run against a real account; `docs/adr/0002-playlist-access.md` was written and approved. The read path is settled: playlist HTML plus unsigned InnerTube continuation requests. Cookie reading and the iframe approach were ruled out.
+- `src/content/identify.ts` and `src/core/playlist-input.ts` are written and tested.
+- **Next up: Phase 1** (storage, schema, messaging), then Phase 3 (the indexer — per ADR-0002).

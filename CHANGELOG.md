@@ -1,11 +1,12 @@
 # Changelog
 
-Bu proje [Semantic Versioning](https://semver.org/lang/tr/) kullanır.
+This project follows [Semantic Versioning](https://semver.org/).
 
-## [Yayınlanmadı]
+## [Unreleased]
 
-### Eklendi
-- Faz 0: proje iskeleti, derleme betiği, lint kuralları, birim test altyapısı.
-- Düzeltildi: `build.mjs` Windows'ta yolu bozuyordu (`fileURLToPath` kullanılıyor).
-- `npm run zip` artık Windows'ta da çalışıyor (`Compress-Archive`).
-- Dev bağımlılıkları güncellendi: vitest 5, eslint 10, esbuild 0.28. `npm audit` temiz.
+### Added
+- Phase 0: project scaffold, build script, lint rules, unit test harness.
+- Fixed: `build.mjs` mangled paths on Windows (now uses `fileURLToPath`).
+- `npm run zip` now works on Windows too (`Compress-Archive`).
+- Dev dependencies updated: vitest 5, eslint 10, esbuild 0.28. `npm audit` clean.
+- ADR-0002: the playlist read path was settled by measurement. Reading `SAPISID` and the iframe approach were dropped.

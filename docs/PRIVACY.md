@@ -1,29 +1,29 @@
-# Gizlilik
+# Privacy
 
-Contact Sheet sunucusuz çalışır. Hesap yoktur, kayıt yoktur, telemetri yoktur.
+Contact Sheet runs without a server. There is no account, no sign-up, no telemetry.
 
-## Cihazında saklanan veriler
+## Data stored on your device
 
-`chrome.storage.local` içinde, yalnızca senin tarayıcında:
+Inside `chrome.storage.local`, in your browser only:
 
-| Veri | Neden |
+| Data | Why |
 |---|---|
-| Oynatma listesi kimlikleri (`WL`, `PL...`) | Hangi listeyi gizleyeceğini bilmek için |
-| Liste başlıkları | Arayüzde göstermek için |
-| Bu listelerdeki video kimlikleri | Ana sayfadaki kartları eşleştirmek için |
-| Senkron zaman damgaları ve ayarlar | Durum göstermek ve zamanlamak için |
+| Playlist IDs (`WL`, `PL...`) | To know which playlist to hide |
+| Playlist titles | To show them in the interface |
+| The video IDs in those playlists | To match against cards on the homepage |
+| Sync timestamps and settings | To show status and schedule the next sync |
 
-## Saklanmayanlar
+## What is not stored
 
-İzleme geçmişi, arama geçmişi, öneri akışının içeriği, kanal listeleri, çerezler,
-oturum anahtarları, kimlik bilgileri. Hiçbiri okunmaz veya yazılmaz.
+Watch history, search history, the contents of the recommendation feed, channel
+lists, cookies, session keys, credentials. None of it is read or written.
 
-## Ağ
+## Network
 
-youtube.com dışında hiçbir adrese istek gönderilmez. Analitik, hata raporlama
-veya güncelleme kontrolü servisi yoktur.
+No request is sent to any address outside youtube.com. There is no analytics,
+error reporting or update-check service.
 
-## Silme
+## Deletion
 
-Eklentiyi kaldırmak cihazdaki tüm verisini siler. Ayarları elle sıfırlamak için
-popup içindeki sıfırlama seçeneğini kullanabilirsin (Faz 5).
+Removing the extension deletes all of its data from your device. To reset your
+settings by hand, use the reset option in the popup (Phase 5).
