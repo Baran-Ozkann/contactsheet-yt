@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "__MSG_extName__",
   "description": "__MSG_extDescription__",
-  "default_locale": "tr",
+  "default_locale": "en",
   "version": "0.1.0",
   "minimum_chrome_version": "116",
   "icons": {

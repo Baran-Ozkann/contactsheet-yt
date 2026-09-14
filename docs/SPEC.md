@@ -138,7 +138,7 @@ contactsheet-yt/
 {
   "manifest_version": 3,
   "name": "__MSG_extName__",
-  "default_locale": "tr",
+  "default_locale": "en",
   "version": "0.1.0",
   "permissions": ["storage", "alarms"],
   "host_permissions": ["https://www.youtube.com/*"],
@@ -202,7 +202,7 @@ two questions — most design mistakes come from conflating them:
 
 ### 4.0 Capability layers
 
-The extension is not one monolith. Four layers work **independently**; the lower ones
+The extension is not one monolith. The layers work **independently**; the lower ones
 keep working even when the ones above them do not. This is the single most important
 resilience decision in the project: when YouTube breaks one endpoint the extension does
 not die outright, it loses capability.
@@ -212,7 +212,11 @@ not die outright, it loses capability.
 | **L0** | Playlist cards and shelves | Only the `playlistId` — no network request | None |
 | **L1** | Videos in playlists of ≤100 items | The playlist page HTML (§4.2 Path 1) | Low |
 | **L2** | The entirety of large playlists | InnerTube + a continuation token (§4.2 Path 2) | Medium |
-| **L3** | "Watch later" for free | The toggle state carried on the card (§4.2 Path 3) | Must be verified |
+| **L3** | ~~"Watch later" for free~~ | ~~The toggle state carried on the card~~ | **Ruled out** — see §4.2 Path 3 |
+
+L3 was measured in Phase 2 and does not exist: homepage cards carry no WL membership
+signal (ADR-0002). WL is read through Path 1+2 like any other playlist, so it is covered
+by L1/L2. The row is kept here only so the layer numbering stays stable.
 
 **Rule:** L0 must work under all circumstances, and no network error may take it down.
 The popup shows which playlist is being filtered at which layer, so the user never has
@@ -494,8 +498,8 @@ Each phase is **its own branch and its own PR**. At the end of a phase the agent
 **Done when:** Measurement output is recorded for both WL and an ordinary playlist; whether Path 3 exists is settled; and the ADR states which layer depends on which path. **Phase 3 does not start until the ADR is approved.**
 
 ### Phase 3 — Indexing Engine
-**To do:** `PlaylistIndexer`: page 1 via Path 1, continuation pages via Path 2, backoff, cancellation, progress events, partial saves. Signature computation in an isolated file (§7 rule 15). On the service worker side: the alarm scheduler, finding a YT tab, and handing out the job. Write serializing.
-**Done when:** A playlist of 500+ videos is indexed completely; with Path 2 disabled the playlist is partially indexed at the L1 level and `complete:false` is written; a second sync produces no contention; and the signature function does not leak the cookie value (test).
+**To do:** `PlaylistIndexer`: page 1 from the playlist page HTML via Path 1, continuation pages via Path 2 **unsigned** (per ADR-0002), backoff, cancellation, progress events, partial saves. On the service worker side: the alarm scheduler, finding a YT tab, and handing out the job. Write serializing.
+**Done when:** A playlist of 500+ videos is indexed completely; with Path 2 disabled the playlist is partially indexed at the L1 level and `complete:false` is written; a second sync produces no contention; and no cookie is read and no request carries an `Authorization` header (§7 rule 15).
 
 ### Phase 4 — Hiding Engine
 **To do:** `SelectorRegistry`, `DomScanner`, `Hider`, style injection, SPA navigation handling, the batch budget, the debug overlay.
@@ -511,7 +515,7 @@ Each phase is **its own branch and its own PR**. At the end of a phase the agent
 
 ### Phase 7 — Security Hardening
 **To do:** Auditing the items in §7 one by one, `docs/THREAT-MODEL.md` + `docs/SECURITY.md` + `docs/PRIVACY.md`, justifying the permissions, a dependency audit, and verifying that logs are stripped from the production build.
-**Done when:** An evidence table has been written for the 14 security rules (rule → where it is enforced → how it was verified).
+**Done when:** An evidence table has been written for the 15 security rules (rule → where it is enforced → how it was verified).
 
 ### Phase 8 — Release
 **To do:** README (what it does, what it does not do, limitations, setup, a privacy summary, screenshots), CHANGELOG, the SemVer `v0.1.0` tag, a CI-built zip + SHA-256, `CONTRIBUTING.md`, issue templates.
@@ -542,7 +546,7 @@ Each phase is **its own branch and its own PR**. At the end of a phase the agent
 
 | Risk | Impact | Response |
 |---|---|---|
-| InnerTube continuation pages start requiring a signature | Large playlists stay incomplete | `SAPISIDHASH` (§4.2 Path 2); failing that, a partial index at the L1 level + Path 4 |
+| InnerTube continuation pages start requiring a signature | Large playlists stay incomplete | Continuations are measured to work **unsigned** (ADR-0002). If that stops holding, the response is a partial index at the L1 level with `complete:false`, and Path 4 (hidden iframe) is brought back from `docs/BACKLOG.md`. No cookie is read either way (§7 rule 15). |
 | Automatic discovery breaks | Playlists cannot be found | Manual URL entry (FR-11) is always available |
 | YouTube changes its DOM tags | Hiding silently stops | Layered selectors + generic fallback + the debug overlay |
 | Syncing only while a YT tab is open | User expectation | A clear message in the interface, and an automatic retry when a tab opens |
