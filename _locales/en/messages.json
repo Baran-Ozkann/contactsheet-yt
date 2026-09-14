@@ -13,6 +13,8 @@
     "placeholders": { "count": { "content": "$1", "example": "3" } }
   },
   "popupPhaseNote": { "message": "The interface arrives in Phase 5." },
+  "playlistWatchLater": { "message": "Watch later" },
+  "playlistLiked":     { "message": "Liked videos" },
   "actionRefresh":  { "message": "Refresh" },
   "actionRefreshing": { "message": "Refreshing" }
 }
