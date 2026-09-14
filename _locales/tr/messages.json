@@ -138,5 +138,20 @@
   },
   "actionRefreshed": {
     "message": "Yenilendi"
+  },
+  "actionExport": {
+    "message": "Dışa aktar"
+  },
+  "actionImport": {
+    "message": "İçe aktar"
+  },
+  "popupExported": {
+    "message": "Ayarlar dışa aktarıldı"
+  },
+  "popupImported": {
+    "message": "Ayarlar içe aktarıldı"
+  },
+  "popupImportInvalid": {
+    "message": "Bu dosya bir Contact Sheet ayar dosyası değil."
   }
 }

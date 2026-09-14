@@ -1,4 +1,5 @@
 import { parsePlaylistInput } from '../core/playlist-input.js';
+import { exportSettings, importSettings, settingsFilename } from '../core/settings.js';
 import type { Message, PlaylistView, PopupState } from '../core/messaging.js';
 
 /**
@@ -32,6 +33,9 @@ const nodes = {
   empty: el<HTMLElement>('empty'),
   emptyCopy: el<HTMLParagraphElement>('empty-copy'),
   ghostStrip: el<HTMLDivElement>('ghost-strip'),
+  exportButton: el<HTMLButtonElement>('export'),
+  importButton: el<HTMLButtonElement>('import'),
+  importFile: el<HTMLInputElement>('import-file'),
   live: el<HTMLParagraphElement>('live'),
   sprocket: document.getElementById('sprocket') as unknown as SVGSVGElement,
 };
@@ -247,6 +251,13 @@ async function toggleRow(row: HTMLElement): Promise<void> {
   await load();
 }
 
+function showError(key: string): void {
+  nodes.message.textContent = t(key);
+  nodes.message.hidden = false;
+  nodes.message.classList.add('is-error');
+  announce(t(key));
+}
+
 async function addFromInput(): Promise<void> {
   const raw = nodes.addInput.value;
   const playlistId = parsePlaylistInput(raw);
@@ -307,6 +318,42 @@ async function refresh(): Promise<void> {
   }, REFRESHED_HOLD_MS);
 }
 
+/**
+ * Settings only, never the index (FR-10). A blob URL plus a download attribute
+ * keeps this inside the extension page — the downloads permission is not
+ * requested and will not be (SPEC 7 rule 3).
+ */
+async function exportToFile(): Promise<void> {
+  const res = (await send({ type: 'settings:get' })) as
+    | { ok: true; settings: Parameters<typeof exportSettings>[0] }
+    | null;
+  if (!res || res.ok !== true) {
+    showError('popupSettingsError');
+    return;
+  }
+  const blob = new Blob([exportSettings(res.settings)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = settingsFilename();
+  link.click();
+  URL.revokeObjectURL(url);
+  announce(t('popupExported'));
+}
+
+async function importFromFile(file: File): Promise<void> {
+  const settings = importSettings(await file.text());
+  if (settings === null) {
+    showError('popupImportInvalid');
+    return;
+  }
+  nodes.message.classList.remove('is-error');
+  nodes.message.hidden = true;
+  await send({ type: 'settings:set', patch: settings });
+  announce(t('popupImported'));
+  await load();
+}
+
 async function toggleMaster(): Promise<void> {
   const next = nodes.master.getAttribute('aria-checked') !== 'true';
   nodes.master.setAttribute('aria-checked', String(next));
@@ -324,6 +371,13 @@ function start(): void {
   nodes.master.addEventListener('click', () => void toggleMaster());
   nodes.refresh.addEventListener('click', () => void refresh());
   nodes.addButton.addEventListener('click', () => void addFromInput());
+  nodes.exportButton.addEventListener('click', () => void exportToFile());
+  nodes.importButton.addEventListener('click', () => nodes.importFile.click());
+  nodes.importFile.addEventListener('change', () => {
+    const file = nodes.importFile.files?.[0];
+    if (file) void importFromFile(file);
+    nodes.importFile.value = '';
+  });
   nodes.addInput.addEventListener('keydown', (event) => {
     if (event.key === 'Enter') void addFromInput();
   });

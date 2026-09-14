@@ -138,5 +138,20 @@
   },
   "actionRefreshed": {
     "message": "Refreshed"
+  },
+  "actionExport": {
+    "message": "Export"
+  },
+  "actionImport": {
+    "message": "Import"
+  },
+  "popupExported": {
+    "message": "Settings exported"
+  },
+  "popupImported": {
+    "message": "Settings imported"
+  },
+  "popupImportInvalid": {
+    "message": "That file isn't a Contact Sheet settings file."
   }
 }
