@@ -1,5 +1,5 @@
 import { MAX_PARSE_DEPTH, MAX_VIDEO_IDS_PER_PLAYLIST, safeJsonParse } from '../core/schema.js';
-import { isVideoId, type VideoId } from '../core/types.js';
+import { isPlaylistId, isVideoId, type VideoId } from '../core/types.js';
 
 /**
  * YouTube data access (spec §4, ADR-0002).
@@ -200,4 +200,89 @@ export function extractContinuationTokens(data: unknown): string[] {
 
   walk(data, 0, false);
   return [...preferred, ...fallback];
+}
+
+const ORIGIN = 'https://www.youtube.com';
+
+/**
+ * Path 1 (ADR-0002): the playlist page HTML, which carries page 1 inline.
+ *
+ * `credentials: 'include'` is the whole authentication story. The request is
+ * same-origin, so the session cookie rides along automatically — we never read
+ * `document.cookie`, never compute a signature, and never send an
+ * `Authorization` header (spec §7 rules 5 and 15).
+ */
+export async function fetchPlaylistHtml(
+  playlistId: string,
+  signal?: AbortSignal,
+): Promise<string | null> {
+  if (!isPlaylistId(playlistId)) return null;
+  const url = new URL('/playlist', ORIGIN);
+  url.searchParams.set('list', playlistId);
+  try {
+    const res = await fetch(url.toString(), {
+      credentials: 'include',
+      ...(signal ? { signal } : {}),
+    });
+    if (!res.ok) return null;
+    return await res.text();
+  } catch {
+    // Includes abort. Callers treat null as "no more data", never as "hide".
+    return null;
+  }
+}
+
+/**
+ * Path 2 (ADR-0002): an InnerTube continuation request, deliberately unsigned.
+ *
+ * The measurement found signed and unsigned requests returning identical
+ * results (HTTP 200, same 25 videos), so the signature — and with it any reason
+ * to touch cookies — was dropped. The only header sent is Content-Type.
+ */
+export async function fetchContinuation(
+  token: string,
+  config: ClientConfig,
+  signal?: AbortSignal,
+): Promise<unknown> {
+  const url = new URL('/youtubei/v1/browse', ORIGIN);
+  url.searchParams.set('key', config.apiKey);
+  const body = {
+    context: { client: { clientName: 'WEB', clientVersion: config.clientVersion } },
+    continuation: token,
+  };
+  try {
+    const res = await fetch(url.toString(), {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      ...(signal ? { signal } : {}),
+    });
+    if (!res.ok) return undefined;
+    return safeJsonParse(await res.text());
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Best-effort playlist title, for display only (spec §4.1). It is never used
+ * for matching, and the popup falls back to showing the id, so an unrecognised
+ * shape is harmless rather than a failure. Shapes here are not measured.
+ */
+export function extractPlaylistTitle(data: unknown): string | null {
+  const candidates = [
+    ['header', 'playlistHeaderRenderer', 'title', 'simpleText'],
+    ['metadata', 'playlistMetadataRenderer', 'title'],
+    ['microformat', 'microformatDataRenderer', 'title'],
+  ];
+  for (const path of candidates) {
+    let node: unknown = data;
+    for (const key of path) {
+      if (node === null || typeof node !== 'object') { node = undefined; break; }
+      node = (node as Record<string, unknown>)[key];
+    }
+    if (typeof node === 'string' && node.trim() !== '') return node.trim().slice(0, 200);
+  }
+  return null;
 }
