@@ -16,7 +16,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "check": "npm run typecheck && npm run lint && npm run test && npm run build",
-    "zip": "node build.mjs --prod --zip"
+    "zip": "node build.mjs --prod --zip",
+    "test:perf": "vitest run tests/unit/dom-perf.test.ts --disable-console-intercept"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
