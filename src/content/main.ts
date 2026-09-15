@@ -1,11 +1,11 @@
 import { DEBUG_ATTR, HIDDEN_ATTR, STYLE_ID } from './selectors.js';
 import { Scanner, findGridContainer } from './scanner.js';
 import { clearSeen, unhideAll } from './hider.js';
-import { indexPlaylist } from './indexer.js';
+import { cancelSync, runSyncJob } from './sync-job.js';
 import { buildHiddenVideoSet } from '../core/index-store.js';
 import { readSettings } from '../core/settings.js';
 import { isMessage, isTrustedSender } from '../core/messaging.js';
-import { isPlaylistId, type IndexEntry, type PlaylistId } from '../core/types.js';
+import type { PlaylistId } from '../core/types.js';
 import { log } from '../core/logger.js';
 
 /**
@@ -97,48 +97,6 @@ async function refresh(): Promise<void> {
     scanner.start(grid);
     attached = true;
   });
-}
-
-// ---- indexing jobs ----------------------------------------------------------
-
-let syncAbort: AbortController | null = null;
-
-function cancelSync(reason: string): void {
-  if (!syncAbort) return;
-  log.debug('cancelling sync', { reason });
-  syncAbort.abort();
-  syncAbort = null;
-}
-
-/**
- * Indexes the requested playlists one at a time. Concurrency stays at 1 across
- * playlists as well as within one (spec §4.3) — parallel fetching is exactly
- * the traffic pattern that gets a session rate-limited.
- */
-async function runSyncJob(playlistIds: readonly string[]): Promise<{ entries: IndexEntry[] }> {
-  cancelSync('superseded');
-  const controller = new AbortController();
-  syncAbort = controller;
-
-  const entries: IndexEntry[] = [];
-  try {
-    for (const playlistId of playlistIds) {
-      if (controller.signal.aborted) break;
-      if (!isPlaylistId(playlistId)) continue;
-      const result = await indexPlaylist(playlistId, { signal: controller.signal });
-      // Drop the display-only title before crossing the boundary; the worker
-      // stores index entries, and settings titles are its own business.
-      entries.push({
-        playlistId: result.playlistId,
-        videoIds: result.videoIds,
-        syncedAt: result.syncedAt,
-        complete: result.complete,
-      });
-    }
-  } finally {
-    if (syncAbort === controller) syncAbort = null;
-  }
-  return { entries };
 }
 
 // ---- wiring -----------------------------------------------------------------
