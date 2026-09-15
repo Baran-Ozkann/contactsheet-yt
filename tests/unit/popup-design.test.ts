@@ -7,7 +7,37 @@ import { describe, expect, it } from 'vitest';
 // is vitest's working directory.
 const css = readFileSync('src/popup/popup.css', 'utf8');
 const html = readFileSync('src/popup/index.html', 'utf8');
+const ts = readFileSync('src/popup/popup.ts', 'utf8');
 const spec = readFileSync('docs/SPEC.md', 'utf8');
+
+interface Segment {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+}
+
+/**
+ * The two cross strokes, reduced to the chord between their endpoints. The
+ * curve wobbles around that chord by a couple of units, so if the chords cross
+ * the drawn strokes cross too.
+ */
+function crossStrokes(): Segment[] {
+  const out: Segment[] = [];
+  for (const m of ts.matchAll(/'M\s+([\d.]+)\s+([\d.]+)\s+C\s+[^']*?([\d.]+)\s+([\d.]+)'/g)) {
+    out.push({ x1: Number(m[1]), y1: Number(m[2]), x2: Number(m[3]), y2: Number(m[4]) });
+  }
+  return out;
+}
+
+/** Standard orientation test: the segments cross iff each straddles the other. */
+function straddles(a: Segment, b: Segment): boolean {
+  const side = (s: Segment, x: number, y: number): number =>
+    Math.sign((s.x2 - s.x1) * (y - s.y1) - (s.y2 - s.y1) * (x - s.x1));
+  return (
+    side(a, b.x1, b.y1) * side(a, b.x2, b.y2) < 0 && side(b, a.x1, a.y1) * side(b, a.x2, a.y2) < 0
+  );
+}
 
 /** The palette as §6.2 declares it — the binding source, not a copy of it. */
 function specPalette(): Record<string, string> {
@@ -112,9 +142,30 @@ describe('spec §6 required properties', () => {
   });
 
   it('keeps the cross thin enough to read type through (item 1)', () => {
+    // Legibility comes from weight and opacity, never from routing the strokes
+    // around the type — so both have to stay low.
     const width = /\.cross path\s*\{[^}]*stroke-width:\s*([\d.]+)/.exec(css)?.[1];
-    expect(Number(width)).toBeLessThanOrEqual(1.5);
-    expect(css).toMatch(/stroke-opacity:\s*0?\.9/);
+    expect(Number(width)).toBeLessThanOrEqual(1.25);
+    const opacity = /\.cross path\s*\{[^}]*stroke-opacity:\s*([\d.]+)/.exec(css)?.[1];
+    expect(Number(opacity)).toBeGreaterThan(0);
+    expect(Number(opacity)).toBeLessThanOrEqual(0.6);
+  });
+
+  it('is two strokes that actually intersect over the row (item 1)', () => {
+    // A mark whose strokes dodge the title is four fragments in the corners,
+    // not a cross. This is the assertion that stops that regression.
+    const strokes = crossStrokes();
+    expect(strokes).toHaveLength(2);
+    const [a, b] = strokes as [Segment, Segment];
+    expect(straddles(a, b)).toBe(true);
+  });
+
+  it('spans the row rather than stopping short of the type (item 1)', () => {
+    const [a, b] = crossStrokes() as [Segment, Segment];
+    // viewBox is 0 0 100 44, so each stroke has to run most of that width.
+    for (const s of [a, b]) {
+      expect(Math.abs(s.x2 - s.x1)).toBeGreaterThanOrEqual(85);
+    }
   });
 
   it.each([
@@ -134,7 +185,7 @@ describe('spec §6 required properties', () => {
     // A bar where a title would sit, and a mark already on one frame at a
     // fraction of its strength — boxes and rules only.
     expect(css).toMatch(/\.ghost-bar\s*\{/);
-    expect(css).toMatch(/\.ghost \.cross path\s*\{[^}]*stroke-opacity:\s*0?\.22/);
+    expect(css).toMatch(/\.ghost \.cross path\s*\{[^}]*stroke-opacity:\s*0?\.14/);
     expect(css).not.toMatch(/\.ghost[^{]*\{[^}]*border-radius/);
   });
 

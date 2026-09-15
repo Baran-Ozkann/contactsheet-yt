@@ -86,7 +86,15 @@ function buildSprocket(): void {
   }
 }
 
-/** The hand-drawn cross: two slightly wobbly strokes (spec §6.5). */
+/**
+ * The hand-drawn cross: two slightly wobbly strokes (spec §6.5).
+ *
+ * The two strokes have to genuinely intersect over the middle of the row —
+ * a mark that dodges the type is four fragments in the corners, not a cross.
+ * Legibility is bought with weight and opacity in the stylesheet instead: the
+ * stroke is thin and translucent, so the title reads through it. Strike
+ * through, not avoid.
+ */
 function buildCross(): SVGSVGElement {
   const svg = document.createElementNS(SVG_NS, 'svg');
   svg.setAttribute('class', 'cross');
@@ -94,7 +102,7 @@ function buildCross(): SVGSVGElement {
   svg.setAttribute('preserveAspectRatio', 'none');
   svg.setAttribute('aria-hidden', 'true');
   // Deliberately not straight lines — a grease pencil does not draw straight.
-  for (const d of ['M 6 7 C 34 16, 62 28, 94 37', 'M 94 8 C 63 17, 35 27, 6 38']) {
+  for (const d of ['M 4 8 C 32 15, 62 29, 96 36', 'M 96 9 C 65 16, 33 28, 4 37']) {
     const path = document.createElementNS(SVG_NS, 'path');
     path.setAttribute('d', d);
     path.setAttribute('pathLength', '1');

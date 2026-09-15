@@ -244,7 +244,9 @@ h1 {
 .cross {
   position: absolute;
   /* Sits inside the row's padding, so the stroke never reaches the frame edge
-     and the two strokes read as one deliberate mark rather than a full bleed. */
+     and the two strokes read as one deliberate mark rather than a full bleed.
+     It still spans the full title, because a mark that stops short of the type
+     it strikes is a decoration. */
   inset: 7px 14px;
   pointer-events: none;
 }
@@ -256,9 +258,12 @@ h1 {
      rendered several times its nominal width and the round caps pushed past
      the edges. This pins the width to real pixels at any row size. */
   vector-effect: non-scaling-stroke;
-  stroke-width: 1.5;
+  /* Weight and opacity, not geometry, are what keep the title readable. The
+     strokes run straight over the type; at 1.25px and 0.55 alpha the letters
+     read through the mark instead of being erased by it. */
+  stroke-width: 1.25;
   stroke-linecap: round;
-  stroke-opacity: 0.9;
+  stroke-opacity: 0.55;
   fill: none;
   stroke-dasharray: 1;
   stroke-dashoffset: 1;
@@ -421,7 +426,7 @@ body.is-syncing .sync-status {
    what the gesture does without explaining it. */
 .ghost .cross path {
   stroke-dashoffset: 0;
-  stroke-opacity: 0.22;
+  stroke-opacity: 0.14;
   transition: none;
 }
 
