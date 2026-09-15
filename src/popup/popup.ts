@@ -1,8 +1,9 @@
 import { parsePlaylistInput } from '../core/playlist-input.js';
 import { buildCross } from './cross.js';
 import { buildTail, perforate } from './sprocket.js';
+import { buildRow, type RowContext } from './rows.js';
 import { exportSettings, importSettings, settingsFilename } from '../core/settings.js';
-import type { Message, PlaylistView, PopupState } from '../core/messaging.js';
+import type { Message, PopupState } from '../core/messaging.js';
 
 /**
  * The contact-sheet interface (spec §6).
@@ -85,52 +86,8 @@ function localize(): void {
 
 // ---- rendering --------------------------------------------------------------
 
-function rowNote(view: PlaylistView): string | null {
-  // A hidden playlist with no index is L0: its card goes, its videos stay. That
-  // is legitimate, and saying so beats letting the user guess (spec §4.0).
-  if (view.hidden && view.layer === 'L0') return t('popupLayerCardOnly');
-  if (view.hidden && view.partial) {
-    return t('popupPartial', num(view.indexedCount), num(view.itemCount ?? view.indexedCount));
-  }
-  return null;
-}
-
-function buildRow(view: PlaylistView, position: number): HTMLButtonElement {
-  const row = document.createElement('button');
-  row.type = 'button';
-  row.className = 'row';
-  row.setAttribute('role', 'switch');
-  row.setAttribute('aria-checked', String(view.hidden));
-  row.dataset.playlistId = view.id;
-  // The row's own hole in the sprocket gutter. It takes grease from the same
-  // aria-checked the cross does, so the margin cannot disagree with the list.
-  perforate(row, position - 1);
-
-  const no = document.createElement('span');
-  no.className = 'row-no';
-  no.textContent = String(position).padStart(2, '0');
-
-  const title = document.createElement('span');
-  title.className = 'row-title';
-  title.textContent = view.title; // textContent only — spec §7 rule 2
-
-  const count = document.createElement('span');
-  count.className = 'row-count';
-  count.textContent = t('popupRowVideos', num(view.indexedCount));
-
-  row.append(no, title, count);
-
-  const note = rowNote(view);
-  if (note !== null) {
-    const noteEl = document.createElement('span');
-    noteEl.className = 'row-note';
-    noteEl.textContent = note;
-    row.append(noteEl);
-  }
-
-  row.append(buildCross());
-  return row;
-}
+/** The chrome-dependent helpers the row builders need (src/popup/rows.ts). */
+const rowContext: RowContext = { t, num };
 
 /**
  * Three unexposed frames, one already carrying a faint mark. Shown once, on
@@ -188,7 +145,7 @@ function render(state: PopupState): void {
   renderEmpty(state);
 
   nodes.rows.textContent = '';
-  state.playlists.forEach((view, i) => nodes.rows.append(buildRow(view, i + 1)));
+  state.playlists.forEach((view, i) => nodes.rows.append(buildRow(view, i + 1, rowContext)));
 
   nodes.syncStatus.textContent = formatSyncStatus(state);
   document.body.classList.toggle('is-syncing', state.syncing);
