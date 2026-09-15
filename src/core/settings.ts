@@ -6,6 +6,7 @@ import {
   type PlaylistSetting,
   type Settings,
 } from './types.js';
+import { MAX_TITLE_LENGTH } from './schema.js';
 import { log } from './logger.js';
 
 const KEY = 'settings';
@@ -39,7 +40,7 @@ export function coerceSettings(raw: unknown): Settings {
       if (!isPlaylistId(id) || typeof value !== 'object' || value === null) continue;
       const entry = value as Partial<PlaylistSetting>;
       accumulator[id] = {
-        title: typeof entry.title === 'string' ? entry.title.slice(0, 200) : id,
+        title: typeof entry.title === 'string' ? entry.title.slice(0, MAX_TITLE_LENGTH) : id,
         hidden: entry.hidden === true,
         itemCount: isFiniteNumber(entry.itemCount) && entry.itemCount >= 0 ? Math.floor(entry.itemCount) : null,
         lastSyncedAt: isFiniteNumber(entry.lastSyncedAt) ? entry.lastSyncedAt : null,

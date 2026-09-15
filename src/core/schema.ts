@@ -11,6 +11,8 @@ import { isVideoId, type IndexEntry, type VideoId } from './types.js';
 
 /** Spec §7.7 — a single playlist may not contribute more than this. */
 export const MAX_VIDEO_IDS_PER_PLAYLIST = 50_000;
+/** Display titles are cut here, wherever they enter. */
+export const MAX_TITLE_LENGTH = 200;
 /** Spec §7.7 — refuse to parse a body larger than this. */
 export const MAX_JSON_BYTES = 8 * 1024 * 1024;
 /** Spec §7.7 — bound on nesting, so a hostile payload cannot exhaust the stack. */
