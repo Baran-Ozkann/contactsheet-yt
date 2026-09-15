@@ -287,21 +287,27 @@ h1 {
    is a mark laid over the type, so the title has to stay readable underneath. */
 .cross {
   position: absolute;
-  /* Sits inside the row's padding, so the stroke never reaches the frame edge
-     and the two strokes read as one deliberate mark rather than a full bleed.
-     It still spans the full title, because a mark that stops short of the type
-     it strikes is a decoration. */
-  inset: 7px 14px 7px calc(var(--gutter) - 2px);
+  /* A fixed box, not one stretched to the row. The left inset clears the
+     sprocket gutter so the mark strikes the frame rather than its hole; the
+     right inset keeps it off the frame edge. Width is therefore exactly 336px
+     on every row, and the height is declared rather than derived, so the
+     viewBox in cross.ts maps 1:1 onto it. Stretching the box was what broke
+     the mark: see the comment there.
+
+     Top-anchored, so the mark lands on the title whether or not the row
+     carries an L0 or partial note underneath. */
+  inset: 6px 14px auto calc(var(--gutter) - 2px);
+  height: 30px;
   pointer-events: none;
 }
 
 .cross path {
   stroke: var(--grease);
-  /* non-scaling-stroke is what keeps this honest. The viewBox is stretched
-     roughly 3.8x horizontally against 1.1x vertically, so a scaled stroke
-     rendered several times its nominal width and the round caps pushed past
-     the edges. This pins the width to real pixels at any row size. */
-  vector-effect: non-scaling-stroke;
+  /* No vector-effect. The box above is 1:1 with the viewBox, so a user unit is
+     a device pixel and the stroke needs no compensation. That also leaves
+     stroke-dasharray in the same coordinate system pathLength normalises
+     against — mixing non-scaling-stroke with pathLength is what made the mark
+     render as a stub of itself. */
   /* Weight and opacity, not geometry, are what keep the title readable. The
      strokes run straight over the type; at 1.25px and 0.55 alpha the letters
      read through the mark instead of being erased by it. */

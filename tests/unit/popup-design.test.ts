@@ -103,14 +103,10 @@ describe('spec §6 required properties', () => {
   });
 
   it('contains the cross inside its own row', () => {
-    // The row clips, the cross is inset from the frame edge, and the stroke
-    // does not scale with the stretched viewBox — the three things that let it
-    // bleed into the neighbouring row.
+    // A structural guarantee that no future geometry can reach the neighbour.
+    // Where the cross sits and how it scales is measured against the rendered
+    // svg in popup-cross.test.ts, not asserted as stylesheet text here.
     expect(css).toMatch(/\.row\s*\{[^}]*overflow:\s*hidden/);
-    // The left inset also clears the sprocket gutter, so the mark strikes the
-    // frame's content and never the perforation beside it.
-    expect(css).toMatch(/\.cross\s*\{[^}]*inset:\s*7px 14px 7px calc\(var\(--gutter\) - 2px\)/);
-    expect(css).toMatch(/vector-effect:\s*non-scaling-stroke/);
   });
 
   it('keeps the cross thin enough to read type through (item 1)', () => {

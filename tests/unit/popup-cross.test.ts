@@ -76,6 +76,16 @@ function px(value: string): number {
   return Number(plain![1]);
 }
 
+/**
+ * The declarations on `.cross path`, comments stripped — a property named in a
+ * comment explaining why it is absent must not read as the property being set.
+ */
+function pathRule(): string {
+  const rule = /\.cross path\s*\{([^}]*)\}/.exec(css)?.[1] ?? '';
+  expect(rule, '.cross path has no rule in popup.css').not.toBe('');
+  return rule.replace(/\/\*[\s\S]*?\*\//g, '');
+}
+
 /** The box the stylesheet gives the cross, in pixels, on a plain row. */
 function crossBox(): Box {
   const rule = /\.cross\s*\{([^}]*)\}/.exec(css)?.[1] ?? '';
@@ -107,7 +117,10 @@ interface Rendered {
   box: Box;
   scaleX: number;
   scaleY: number;
+  /** Endpoints in rendered pixels. */
   strokes: Stroke[];
+  /** The same endpoints in the svg's own user units, before any scaling. */
+  authored: Stroke[];
 }
 
 /** Builds a cross and maps its paths into the pixels they will occupy. */
@@ -125,11 +138,11 @@ function render(): Rendered {
     y: box.top + (p.y - minY) * scaleY,
   });
 
-  const strokes = [...svg.querySelectorAll('path')].map((path) => {
-    const { from, to } = endpoints(path.getAttribute('d') ?? '');
-    return { from: place(from), to: place(to) };
-  });
-  return { box, scaleX, scaleY, strokes };
+  const authored = [...svg.querySelectorAll('path')].map((path) =>
+    endpoints(path.getAttribute('d') ?? ''),
+  );
+  const strokes = authored.map(({ from, to }) => ({ from: place(from), to: place(to) }));
+  return { box, scaleX, scaleY, strokes, authored };
 }
 
 /** Where two chords meet, or null when they do not meet at all. */
@@ -193,5 +206,57 @@ describe('the cross as it renders', () => {
 
   it('clears the sprocket gutter, so it strikes the frame and not the hole', () => {
     expect(crossBox().left).toBeGreaterThanOrEqual(GUTTER - 2);
+  });
+});
+
+/**
+ * The stroke is revealed by animating stroke-dashoffset, and pathLength="1"
+ * normalises the dash against the path measured in the svg's *user* units. So
+ * anything that makes the rendered path a different length than the authored
+ * one puts the dash and the path in different coordinate systems, and the dash
+ * then covers the wrong fraction of what is drawn.
+ *
+ * That is not a style preference, it is the defect: a 96-unit path rendering
+ * 310px long is a dash covering about a third of the stroke, which reaches the
+ * screen as a stub with the rest of the mark sitting in the gap.
+ */
+describe('the coordinate system the strokes are drawn in', () => {
+  it('maps user units onto pixels 1:1, in both axes', () => {
+    const { scaleX, scaleY } = render();
+    expect(scaleX).toBeCloseTo(1, 5);
+    expect(scaleY).toBeCloseTo(1, 5);
+  });
+
+  it('renders each stroke at the length pathLength normalises it to', () => {
+    const { strokes, authored } = render();
+    const length = (s: Stroke): number => Math.hypot(s.to.x - s.from.x, s.to.y - s.from.y);
+    for (const [i, s] of strokes.entries()) {
+      const ratio = length(s) / length(authored[i]!);
+      expect(ratio, `stroke ${i} renders ${ratio.toFixed(2)}x its authored length`).toBeCloseTo(
+        1,
+        2,
+      );
+    }
+  });
+
+  it('does not stretch the user space to fit the row', () => {
+    // preserveAspectRatio="none" is what allowed the 5.1x anisotropy. The
+    // default uniform fit is a no-op here and a safe failure if the box drifts.
+    expect(buildCross().getAttribute('preserveAspectRatio')).toBeNull();
+  });
+
+  it('needs no vector-effect, and must not carry one', () => {
+    // non-scaling-stroke resolves the dash against the rendered path while
+    // pathLength normalises against the authored one. With a 1:1 box there is
+    // nothing to compensate for, and re-adding it would split the two again.
+    expect(pathRule()).not.toMatch(/vector-effect/);
+  });
+
+  it('still reveals the mark with dasharray and dashoffset (§6.5)', () => {
+    for (const path of Array.from(buildCross().querySelectorAll('path'))) {
+      expect(path.getAttribute('pathLength')).toBe('1');
+    }
+    expect(pathRule()).toMatch(/stroke-dasharray:\s*1;/);
+    expect(pathRule()).toMatch(/stroke-dashoffset:\s*1;/);
   });
 });
