@@ -1,4 +1,4 @@
-import type { PlaylistId, Settings } from './types.js';
+import type { IndexEntry, PlaylistId, Settings } from './types.js';
 
 /** Which capability layer a playlist is actually being filtered at (spec §4.0). */
 export type Layer = 'L0' | 'L1' | 'L2';
@@ -57,6 +57,20 @@ export type Message =
   | { type: 'playlists:remove'; playlistId: PlaylistId }
   | { type: 'playlists:toggle'; playlistId: PlaylistId; hidden: boolean }
   | { type: 'ping' };
+
+/**
+ * The content script's reply to `sync:run`.
+ *
+ * Titles travel beside the entries rather than inside them: an `IndexEntry` is
+ * exactly what the index store holds, and a display title belongs to settings.
+ * They cross together because the content script is the only context that can
+ * read either — it is the one with the youtube.com origin (spec §2.2).
+ */
+export interface SyncRunResponse {
+  entries: IndexEntry[];
+  /** Display titles by playlist id. A playlist whose title did not resolve is absent. */
+  titles: Record<string, string>;
+}
 
 export const MESSAGE_TYPES: ReadonlySet<Message['type']> = new Set([
   'settings:get',

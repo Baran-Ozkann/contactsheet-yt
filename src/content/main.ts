@@ -111,7 +111,7 @@ function start(): void {
 
     runSyncJob(raw.playlistIds).then(sendResponse, (err: unknown) => {
       log.error('sync job failed', err);
-      sendResponse({ entries: [] }); // fail-open: nothing written, nothing hidden
+      sendResponse({ entries: [], titles: {} }); // fail-open: nothing written, nothing hidden
     });
     return true; // async response
   });
