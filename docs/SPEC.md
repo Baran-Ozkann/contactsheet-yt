@@ -52,6 +52,7 @@
 | FR-10 | Export/import of user data (JSON: settings only, not the index). | Filename `contactsheet-settings-YYYYMMDD.json`. |
 | FR-11 | The user can add a playlist by hand, **by pasting a URL**, even when automatic discovery fails. | `youtube.com/playlist?list=PL...`, `watch?v=..&list=PL...` and a bare `PL...` ID are accepted. A free-text playlist **name is not accepted.** |
 | FR-12 | The capability layers work independently: playlist cards keep being hidden even when their contents cannot be read. | With layer 2 failing completely, layer 0 stays functional (§4.0). |
+| FR-13 | The user can remove a playlist from the list. | The settings entry **and** the stored index are both deleted. Removal is confirmed before it happens; the control does not compete with the hide toggle. |
 
 ### 1.2 Non-functional (NFR)
 
@@ -413,7 +414,8 @@ No letterspaced all-caps labels.
 - Alignment: left; numbers right-aligned.
 
 ### 6.5 Interaction
-- Each row is a `<button role="switch" aria-checked>`. The whole row is clickable.
+- Each row is a `<button role="switch" aria-checked>`. The whole row is clickable, except the remove control below.
+- **Removing (FR-13):** a quiet control at the row's right edge, in the same register as Export/Import — never button chrome, never an accent colour. Toggling is the primary action and the remove control must not compete with it. Clicking it opens an inline confirmation in the strip, which names the playlist and says how many indexed videos go with it; confirm and cancel are separate targets, so no single repeated click can remove anything. No modal, no overlay.
 - Toggling: a hand-drawn, slightly wobbly cross made of two `<path>`s inside an `<svg>`, drawn over **180 ms** via `stroke-dasharray/offset` (`cubic-bezier(.2,.7,.3,1)`), with the second stroke delayed by 60 ms. Toggling off runs the same animation in reverse.
 - During a sync: the `fill` of the sprocket holes turns `--safelight` one after another (a 2s loop). There is no other spinner.
 - Focus ring: 2px `--safelight` outline, `outline-offset: 2px`. Use `:focus-visible`.
