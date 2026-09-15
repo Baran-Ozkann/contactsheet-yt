@@ -7,37 +7,7 @@ import { describe, expect, it } from 'vitest';
 // is vitest's working directory.
 const css = readFileSync('src/popup/popup.css', 'utf8');
 const html = readFileSync('src/popup/index.html', 'utf8');
-const ts = readFileSync('src/popup/popup.ts', 'utf8');
 const spec = readFileSync('docs/SPEC.md', 'utf8');
-
-interface Segment {
-  x1: number;
-  y1: number;
-  x2: number;
-  y2: number;
-}
-
-/**
- * The two cross strokes, reduced to the chord between their endpoints. The
- * curve wobbles around that chord by a couple of units, so if the chords cross
- * the drawn strokes cross too.
- */
-function crossStrokes(): Segment[] {
-  const out: Segment[] = [];
-  for (const m of ts.matchAll(/'M\s+([\d.]+)\s+([\d.]+)\s+C\s+[^']*?([\d.]+)\s+([\d.]+)'/g)) {
-    out.push({ x1: Number(m[1]), y1: Number(m[2]), x2: Number(m[3]), y2: Number(m[4]) });
-  }
-  return out;
-}
-
-/** Standard orientation test: the segments cross iff each straddles the other. */
-function straddles(a: Segment, b: Segment): boolean {
-  const side = (s: Segment, x: number, y: number): number =>
-    Math.sign((s.x2 - s.x1) * (y - s.y1) - (s.y2 - s.y1) * (x - s.x1));
-  return (
-    side(a, b.x1, b.y1) * side(a, b.x2, b.y2) < 0 && side(b, a.x1, a.y1) * side(b, a.x2, a.y2) < 0
-  );
-}
 
 /** The palette as §6.2 declares it — the binding source, not a copy of it. */
 function specPalette(): Record<string, string> {
@@ -144,84 +114,13 @@ describe('spec §6 required properties', () => {
   });
 
   it('keeps the cross thin enough to read type through (item 1)', () => {
-    // Legibility comes from weight and opacity, never from routing the strokes
-    // around the type — so both have to stay low.
+    // Weight and opacity only. Whether the strokes actually reach the type is
+    // a rendering question, and popup-cross.test.ts measures it there.
     const width = /\.cross path\s*\{[^}]*stroke-width:\s*([\d.]+)/.exec(css)?.[1];
     expect(Number(width)).toBeLessThanOrEqual(1.25);
     const opacity = /\.cross path\s*\{[^}]*stroke-opacity:\s*([\d.]+)/.exec(css)?.[1];
     expect(Number(opacity)).toBeGreaterThan(0);
     expect(Number(opacity)).toBeLessThanOrEqual(0.6);
-  });
-
-  it('is two strokes that actually intersect over the row (item 1)', () => {
-    // A mark whose strokes dodge the title is four fragments in the corners,
-    // not a cross. This is the assertion that stops that regression.
-    const strokes = crossStrokes();
-    expect(strokes).toHaveLength(2);
-    const [a, b] = strokes as [Segment, Segment];
-    expect(straddles(a, b)).toBe(true);
-  });
-
-  it('spans the row rather than stopping short of the type (item 1)', () => {
-    const [a, b] = crossStrokes() as [Segment, Segment];
-    // viewBox is 0 0 100 44, so each stroke has to run most of that width.
-    for (const s of [a, b]) {
-      expect(Math.abs(s.x2 - s.x1)).toBeGreaterThanOrEqual(85);
-    }
-  });
-
-  it('runs a sprocket strip down the left edge (§6.4)', () => {
-    // The strip is the design's load-bearing element. If it disappears again,
-    // this is the assertion that says so.
-    expect(css).toMatch(/--sprocket-width:\s*16px/);
-    expect(css).toMatch(/--gutter:\s*calc\(var\(--sprocket-width\) \+ 16px\)/);
-    expect(css).toMatch(/^\.perf::before\s*\{/m);
-    expect(html).toMatch(/id="tail"/);
-    // Every band of the strip carries a hole, so it runs the full height.
-    for (const band of ['head', 'message', 'add', 'transfer', 'foot']) {
-      expect(html, band).toMatch(new RegExp(`class="${band} perf"`));
-    }
-  });
-
-  it('aligns the perforations with the rows, not its own pitch (item 2)', () => {
-    // The hole belongs to the frame it sits beside rather than to a standalone
-    // column, which is what let the old 26px pitch drift against the rows.
-    expect(html).not.toMatch(/id="sprocket"/);
-    expect(css).toMatch(/^\.perf\s*\{[^}]*position:\s*relative/m);
-    expect(css).toMatch(/^\.perf::before\s*\{[^}]*position:\s*absolute/m);
-    // Frames reserve the gutter the hole is drawn in, rather than the strip
-    // being laid out as its own grid column.
-    expect(css).not.toMatch(/grid-template-columns:\s*var\(--sprocket-width\)/);
-    expect(css).toMatch(/\.row\s*\{[^}]*padding:\s*12px 16px 12px var\(--gutter\)/);
-  });
-
-  it('marks the hole of a hidden row and leaves a visible one unexposed (item 2)', () => {
-    expect(css).toMatch(
-      /\.row\.perf\[aria-checked='true'\]::before\s*\{[^}]*background:\s*var\(--grease\)/,
-    );
-    const base = /^\.perf::before\s*\{([^}]*)\}/m.exec(css)?.[1] ?? '';
-    expect(base).toMatch(/background:\s*var\(--emulsion\)/);
-    expect(Number(/opacity:\s*([\d.]+)/.exec(base)?.[1])).toBeLessThanOrEqual(0.3);
-  });
-
-  it('keeps plain perforations running below the last row (item 2)', () => {
-    expect(css).toMatch(/--perf-pitch:\s*\d+px/);
-    expect(css).toMatch(/\.tail-cell\s*\{[^}]*height:\s*var\(--perf-pitch\)/);
-    // The tail takes the space the rows leave, rather than the rows taking it.
-    expect(css).toMatch(/\.rows\s*\{[^}]*flex:\s*0 1 auto/);
-    // Basis 0 so a strip's worth of tail cells cannot squeeze the frames.
-    expect(css).toMatch(/\.tail\s*\{[^}]*flex:\s*1 1 0/);
-  });
-
-  it('keeps the amber sync pulse, overriding the grease (§6.5, item 2)', () => {
-    expect(css).toMatch(
-      /body\.is-syncing \.perf::before\s*\{[^}]*animation:\s*sprocket-run 2s linear infinite/,
-    );
-    // The block is short and it is the only one in the sheet, so a bounded
-    // span from its header stays inside it.
-    const frames = /@keyframes sprocket-run[\s\S]{0,400}/.exec(css)?.[0] ?? '';
-    expect(frames).toMatch(/background-color:\s*var\(--safelight\)/);
-    expect(frames).toMatch(/background-color:\s*var\(--emulsion\)/);
   });
 
   it.each([

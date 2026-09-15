@@ -1,4 +1,5 @@
 import { parsePlaylistInput } from '../core/playlist-input.js';
+import { buildCross } from './cross.js';
 import { buildTail, perforate } from './sprocket.js';
 import { exportSettings, importSettings, settingsFilename } from '../core/settings.js';
 import type { Message, PlaylistView, PopupState } from '../core/messaging.js';
@@ -15,7 +16,6 @@ import type { Message, PlaylistView, PopupState } from '../core/messaging.js';
  * node is built with the DOM API — `innerHTML` is forbidden (§7 rule 2).
  */
 
-const SVG_NS = 'http://www.w3.org/2000/svg';
 const REFRESHED_HOLD_MS = 1400;
 
 function el<T extends HTMLElement>(id: string): T {
@@ -66,32 +66,7 @@ async function send(message: Message): Promise<unknown> {
   }
 }
 
-// ---- chrome -----------------------------------------------------------------
-
-/**
- * The hand-drawn cross: two slightly wobbly strokes (spec §6.5).
- *
- * The two strokes have to genuinely intersect over the middle of the row —
- * a mark that dodges the type is four fragments in the corners, not a cross.
- * Legibility is bought with weight and opacity in the stylesheet instead: the
- * stroke is thin and translucent, so the title reads through it. Strike
- * through, not avoid.
- */
-function buildCross(): SVGSVGElement {
-  const svg = document.createElementNS(SVG_NS, 'svg');
-  svg.setAttribute('class', 'cross');
-  svg.setAttribute('viewBox', '0 0 100 44');
-  svg.setAttribute('preserveAspectRatio', 'none');
-  svg.setAttribute('aria-hidden', 'true');
-  // Deliberately not straight lines — a grease pencil does not draw straight.
-  for (const d of ['M 4 8 C 32 15, 62 29, 96 36', 'M 96 9 C 65 16, 33 28, 4 37']) {
-    const path = document.createElementNS(SVG_NS, 'path');
-    path.setAttribute('d', d);
-    path.setAttribute('pathLength', '1');
-    svg.append(path);
-  }
-  return svg;
-}
+// ---- localisation -----------------------------------------------------------
 
 function localize(): void {
   const lang = chrome.i18n.getUILanguage();
