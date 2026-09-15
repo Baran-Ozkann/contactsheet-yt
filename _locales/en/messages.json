@@ -153,5 +153,41 @@
   },
   "popupImportInvalid": {
     "message": "That file isn't a Contact Sheet settings file."
+  },
+  "popupRemoveLabel": {
+    "message": "Remove $NAME$ from the list",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupRemoveConfirm": {
+    "message": "Remove $NAME$?",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupRemoveIndexed": {
+    "message": "Its $COUNT$ indexed videos are deleted with it. Re-adding means a full resync.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupRemoveNotIndexed": {
+    "message": "Nothing is indexed for it yet."
+  },
+  "actionRemove": {
+    "message": "Remove"
+  },
+  "actionCancel": {
+    "message": "Cancel"
+  },
+  "popupAnnounceRemoved": {
+    "message": "Playlist removed"
   }
 }

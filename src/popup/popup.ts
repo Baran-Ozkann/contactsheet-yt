@@ -1,9 +1,10 @@
 import { parsePlaylistInput } from '../core/playlist-input.js';
 import { buildCross } from './cross.js';
 import { buildTail, perforate } from './sprocket.js';
-import { buildRow, type RowContext } from './rows.js';
+import { buildConfirm, buildFrame, classifyClick, type RowContext } from './rows.js';
 import { exportSettings, importSettings, settingsFilename } from '../core/settings.js';
 import type { Message, PopupState } from '../core/messaging.js';
+import type { PlaylistId } from '../core/types.js';
 
 /**
  * The contact-sheet interface (spec §6).
@@ -49,6 +50,13 @@ function t(key: string, ...substitutions: string[]): string {
 }
 
 let numberFormat = new Intl.NumberFormat();
+
+/**
+ * The last state rendered. The confirmation needs the row's title and indexed
+ * count, and re-deriving them from the DOM would mean parsing display-formatted
+ * text back out of spans.
+ */
+let lastState: PopupState | null = null;
 
 function num(value: number): string {
   return numberFormat.format(value);
@@ -132,6 +140,7 @@ function formatSyncStatus(state: PopupState): string {
 }
 
 function render(state: PopupState): void {
+  lastState = state;
   nodes.master.setAttribute('aria-checked', String(state.enabled));
 
   // Teaching on first open, out of the way afterwards: the line says what the
@@ -145,7 +154,7 @@ function render(state: PopupState): void {
   renderEmpty(state);
 
   nodes.rows.textContent = '';
-  state.playlists.forEach((view, i) => nodes.rows.append(buildRow(view, i + 1, rowContext)));
+  state.playlists.forEach((view, i) => nodes.rows.append(buildFrame(view, i + 1, rowContext)));
 
   nodes.syncStatus.textContent = formatSyncStatus(state);
   document.body.classList.toggle('is-syncing', state.syncing);
@@ -165,15 +174,54 @@ async function load(): Promise<void> {
 
 // ---- actions ----------------------------------------------------------------
 
-async function toggleRow(row: HTMLElement): Promise<void> {
-  const playlistId = row.dataset.playlistId;
-  if (!playlistId) return;
+async function toggleRow(playlistId: string): Promise<void> {
+  const row = nodes.rows.querySelector<HTMLElement>(
+    `.row[data-playlist-id="${CSS.escape(playlistId)}"]`,
+  );
+  if (!row) return;
   const next = row.getAttribute('aria-checked') !== 'true';
   // Flip immediately so the cross animates from the click, not from the
   // round-trip; the reload below is authoritative.
   row.setAttribute('aria-checked', String(next));
-  await send({ type: 'playlists:toggle', playlistId, hidden: next });
+  await send({ type: 'playlists:toggle', playlistId: playlistId as PlaylistId, hidden: next });
   announce(t(next ? 'popupAnnounceHidden' : 'popupAnnounceShown'));
+  await load();
+}
+
+/**
+ * Opens the confirmation under a row. Only one is ever open: a second would
+ * make "Remove" ambiguous about which playlist it meant.
+ */
+function openConfirm(playlistId: string): void {
+  closeConfirm();
+  const frame = nodes.rows
+    .querySelector(`.remove[data-playlist-id="${CSS.escape(playlistId)}"]`)
+    ?.closest<HTMLElement>('.frame');
+  const view = lastState?.playlists.find((p) => p.id === playlistId);
+  if (!frame || !view) return;
+
+  frame.classList.add('is-confirming');
+  const panel = buildConfirm(view, rowContext);
+  frame.append(panel);
+  // Focus lands on Cancel, not Remove: the safe option is the default one.
+  panel.querySelector<HTMLButtonElement>('.confirm-no')?.focus();
+  announce(t('popupRemoveConfirm', view.title));
+}
+
+/** Closes the open confirmation, optionally returning focus to what opened it. */
+function closeConfirm(restoreFocus = false): void {
+  const frame = nodes.rows.querySelector<HTMLElement>('.frame.is-confirming');
+  if (!frame) return;
+  frame.classList.remove('is-confirming');
+  frame.querySelector('.confirm')?.remove();
+  if (restoreFocus) frame.querySelector<HTMLButtonElement>('.remove')?.focus();
+}
+
+async function removePlaylist(playlistId: string): Promise<void> {
+  closeConfirm();
+  // The worker deletes the stored index alongside the settings entry (FR-13).
+  await send({ type: 'playlists:remove', playlistId: playlistId as PlaylistId });
+  announce(t('popupAnnounceRemoved'));
   await load();
 }
 
@@ -308,10 +356,33 @@ function start(): void {
     if (event.key === 'Enter') void addFromInput();
   });
 
-  // One listener for the whole strip: rows are replaced on every render.
+  // One listener for the whole strip: frames are replaced on every render.
+  // What a click means is decided in rows.ts, so the ordering that keeps
+  // removal behind the confirmation is testable.
   nodes.rows.addEventListener('click', (event) => {
-    const row = (event.target as Element | null)?.closest<HTMLElement>('.row');
-    if (row) void toggleRow(row);
+    const action = classifyClick(event.target as Element | null);
+    if (!action) return;
+    switch (action.kind) {
+      case 'open-confirm':
+        openConfirm(action.playlistId);
+        return;
+      case 'remove':
+        void removePlaylist(action.playlistId);
+        return;
+      case 'cancel':
+        closeConfirm(true);
+        return;
+      case 'toggle':
+        void toggleRow(action.playlistId);
+    }
+  });
+
+  // Escape backs out of the confirmation, which is what a dialog would do.
+  nodes.rows.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && nodes.rows.querySelector('.frame.is-confirming')) {
+      event.preventDefault();
+      closeConfirm(true);
+    }
   });
 
   // The worker is the only writer, so its writes are the change signal — this

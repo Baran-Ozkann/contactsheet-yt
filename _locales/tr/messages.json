@@ -153,5 +153,41 @@
   },
   "popupImportInvalid": {
     "message": "Bu dosya bir Contact Sheet ayar dosyası değil."
+  },
+  "popupRemoveLabel": {
+    "message": "$NAME$ listesini kaldır",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupRemoveConfirm": {
+    "message": "$NAME$ kaldırılsın mı?",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupRemoveIndexed": {
+    "message": "İndekslenen $COUNT$ video da silinir. Yeniden eklersen baştan senkronize edilir.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupRemoveNotIndexed": {
+    "message": "Bu liste için henüz indekslenmiş video yok."
+  },
+  "actionRemove": {
+    "message": "Kaldır"
+  },
+  "actionCancel": {
+    "message": "Vazgeç"
+  },
+  "popupAnnounceRemoved": {
+    "message": "Liste kaldırıldı"
   }
 }
