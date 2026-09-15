@@ -74,19 +74,43 @@ async function run() {
 
   const bytes = await totalSize(dist);
   console.log(`built ${prod ? 'production' : 'development'} → dist/ (${(bytes / 1024).toFixed(1)} KB)`);
-  if (bytes > 300 * 1024) {
-    console.error('package exceeds the 300 KB budget (NFR-06)');
+  if (bytes > BUDGET_BYTES) {
+    console.error(`package exceeds the ${BUDGET_BYTES / 1024} KB budget (NFR-06)`);
     process.exitCode = 1;
   }
 
   if (wantZip) await zip();
 }
 
+/** NFR-06, measured against what ships. */
+const BUDGET_BYTES = 300 * 1024;
+
+/**
+ * Inline sourcemaps are a development-build artifact and are never packaged, so
+ * counting them against a shipping budget measures the wrong thing. A dev build
+ * had grown to 301.8 KB while the production package it stands for was 60.2 KB.
+ *
+ * Stripping them leaves unminified source, which is still a conservative
+ * over-estimate of the packaged size — the budget stays enforced on every
+ * `npm run check` rather than only on a release build.
+ */
+const SOURCEMAP_COMMENT = '\n//# sourceMappingURL=data:';
+
 async function totalSize(dir) {
   let sum = 0;
   for (const entry of await readdir(dir, { withFileTypes: true })) {
     const p = path.join(dir, entry.name);
-    sum += entry.isDirectory() ? await totalSize(p) : (await readFile(p)).byteLength;
+    if (entry.isDirectory()) {
+      sum += await totalSize(p);
+      continue;
+    }
+    const bytes = await readFile(p);
+    if (prod || !p.endsWith('.js')) {
+      sum += bytes.byteLength;
+      continue;
+    }
+    const cut = bytes.indexOf(SOURCEMAP_COMMENT);
+    sum += cut === -1 ? bytes.byteLength : cut;
   }
   return sum;
 }
