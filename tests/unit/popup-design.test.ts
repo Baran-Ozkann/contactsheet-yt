@@ -137,7 +137,9 @@ describe('spec §6 required properties', () => {
     // does not scale with the stretched viewBox — the three things that let it
     // bleed into the neighbouring row.
     expect(css).toMatch(/\.row\s*\{[^}]*overflow:\s*hidden/);
-    expect(css).toMatch(/\.cross\s*\{[^}]*inset:\s*7px 14px/);
+    // The left inset also clears the sprocket gutter, so the mark strikes the
+    // frame's content and never the perforation beside it.
+    expect(css).toMatch(/\.cross\s*\{[^}]*inset:\s*7px 14px 7px calc\(var\(--gutter\) - 2px\)/);
     expect(css).toMatch(/vector-effect:\s*non-scaling-stroke/);
   });
 
@@ -166,6 +168,60 @@ describe('spec §6 required properties', () => {
     for (const s of [a, b]) {
       expect(Math.abs(s.x2 - s.x1)).toBeGreaterThanOrEqual(85);
     }
+  });
+
+  it('runs a sprocket strip down the left edge (§6.4)', () => {
+    // The strip is the design's load-bearing element. If it disappears again,
+    // this is the assertion that says so.
+    expect(css).toMatch(/--sprocket-width:\s*16px/);
+    expect(css).toMatch(/--gutter:\s*calc\(var\(--sprocket-width\) \+ 16px\)/);
+    expect(css).toMatch(/^\.perf::before\s*\{/m);
+    expect(html).toMatch(/id="tail"/);
+    // Every band of the strip carries a hole, so it runs the full height.
+    for (const band of ['head', 'message', 'add', 'transfer', 'foot']) {
+      expect(html, band).toMatch(new RegExp(`class="${band} perf"`));
+    }
+  });
+
+  it('aligns the perforations with the rows, not its own pitch (item 2)', () => {
+    // The hole belongs to the frame it sits beside rather than to a standalone
+    // column, which is what let the old 26px pitch drift against the rows.
+    expect(html).not.toMatch(/id="sprocket"/);
+    expect(css).toMatch(/^\.perf\s*\{[^}]*position:\s*relative/m);
+    expect(css).toMatch(/^\.perf::before\s*\{[^}]*position:\s*absolute/m);
+    // Frames reserve the gutter the hole is drawn in, rather than the strip
+    // being laid out as its own grid column.
+    expect(css).not.toMatch(/grid-template-columns:\s*var\(--sprocket-width\)/);
+    expect(css).toMatch(/\.row\s*\{[^}]*padding:\s*12px 16px 12px var\(--gutter\)/);
+  });
+
+  it('marks the hole of a hidden row and leaves a visible one unexposed (item 2)', () => {
+    expect(css).toMatch(
+      /\.row\.perf\[aria-checked='true'\]::before\s*\{[^}]*background:\s*var\(--grease\)/,
+    );
+    const base = /^\.perf::before\s*\{([^}]*)\}/m.exec(css)?.[1] ?? '';
+    expect(base).toMatch(/background:\s*var\(--emulsion\)/);
+    expect(Number(/opacity:\s*([\d.]+)/.exec(base)?.[1])).toBeLessThanOrEqual(0.3);
+  });
+
+  it('keeps plain perforations running below the last row (item 2)', () => {
+    expect(css).toMatch(/--perf-pitch:\s*\d+px/);
+    expect(css).toMatch(/\.tail-cell\s*\{[^}]*height:\s*var\(--perf-pitch\)/);
+    // The tail takes the space the rows leave, rather than the rows taking it.
+    expect(css).toMatch(/\.rows\s*\{[^}]*flex:\s*0 1 auto/);
+    // Basis 0 so a strip's worth of tail cells cannot squeeze the frames.
+    expect(css).toMatch(/\.tail\s*\{[^}]*flex:\s*1 1 0/);
+  });
+
+  it('keeps the amber sync pulse, overriding the grease (§6.5, item 2)', () => {
+    expect(css).toMatch(
+      /body\.is-syncing \.perf::before\s*\{[^}]*animation:\s*sprocket-run 2s linear infinite/,
+    );
+    // The block is short and it is the only one in the sheet, so a bounded
+    // span from its header stays inside it.
+    const frames = /@keyframes sprocket-run[\s\S]{0,400}/.exec(css)?.[0] ?? '';
+    expect(frames).toMatch(/background-color:\s*var\(--safelight\)/);
+    expect(frames).toMatch(/background-color:\s*var\(--emulsion\)/);
   });
 
   it.each([

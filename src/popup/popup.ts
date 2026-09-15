@@ -1,4 +1,5 @@
 import { parsePlaylistInput } from '../core/playlist-input.js';
+import { buildTail, perforate } from './sprocket.js';
 import { exportSettings, importSettings, settingsFilename } from '../core/settings.js';
 import type { Message, PlaylistView, PopupState } from '../core/messaging.js';
 
@@ -37,7 +38,7 @@ const nodes = {
   importButton: el<HTMLButtonElement>('import'),
   importFile: el<HTMLInputElement>('import-file'),
   live: el<HTMLParagraphElement>('live'),
-  sprocket: document.getElementById('sprocket') as unknown as SVGSVGElement,
+  tail: el<HTMLDivElement>('tail'),
 };
 
 function t(key: string, ...substitutions: string[]): string {
@@ -66,25 +67,6 @@ async function send(message: Message): Promise<unknown> {
 }
 
 // ---- chrome -----------------------------------------------------------------
-
-/** Builds the sprocket holes to fit the popup height (spec §6.4). */
-function buildSprocket(): void {
-  const pitch = 26;
-  const count = Math.ceil(520 / pitch);
-  nodes.sprocket.setAttribute('viewBox', `0 0 16 ${count * pitch}`);
-  nodes.sprocket.setAttribute('preserveAspectRatio', 'none');
-  for (let i = 0; i < count; i += 1) {
-    const hole = document.createElementNS(SVG_NS, 'rect');
-    hole.setAttribute('x', '4');
-    hole.setAttribute('y', String(i * pitch + 8));
-    hole.setAttribute('width', '8');
-    hole.setAttribute('height', '11');
-    hole.setAttribute('rx', '2');
-    // Staggered so the amber runs down the strip rather than pulsing together.
-    hole.style.animationDelay = `${(i % 8) * 0.25}s`;
-    nodes.sprocket.append(hole);
-  }
-}
 
 /**
  * The hand-drawn cross: two slightly wobbly strokes (spec §6.5).
@@ -145,6 +127,9 @@ function buildRow(view: PlaylistView, position: number): HTMLButtonElement {
   row.setAttribute('role', 'switch');
   row.setAttribute('aria-checked', String(view.hidden));
   row.dataset.playlistId = view.id;
+  // The row's own hole in the sprocket gutter. It takes grease from the same
+  // aria-checked the cross does, so the margin cannot disagree with the list.
+  perforate(row, position - 1);
 
   const no = document.createElement('span');
   no.className = 'row-no';
@@ -181,6 +166,7 @@ function buildGhostStrip(): void {
   for (let i = 0; i < 3; i += 1) {
     const ghost = document.createElement('div');
     ghost.className = 'ghost';
+    perforate(ghost, i);
 
     const no = document.createElement('span');
     no.className = 'ghost-no';
@@ -374,7 +360,7 @@ async function toggleMaster(): Promise<void> {
 
 function start(): void {
   localize();
-  buildSprocket();
+  buildTail(nodes.tail);
 
   nodes.master.addEventListener('click', () => void toggleMaster());
   nodes.refresh.addEventListener('click', () => void refresh());

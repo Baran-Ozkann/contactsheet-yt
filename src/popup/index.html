@@ -10,12 +10,13 @@
     <!-- Text is filled from _locales at load (spec §10 rule 13); lang is set
          from the resolved UI language, so neither is hardcoded here. -->
 
-    <!-- The sprocket strip: the design's one decorative element (spec §6.4).
-         Holes are generated at load so the count fits the popup height. -->
-    <svg class="sprocket" id="sprocket" aria-hidden="true" focusable="false"></svg>
+    <!-- The sprocket strip (spec §6.4) runs down the left edge, but it is not a
+         separate column: every frame draws its own hole in the gutter it
+         reserves, so the perforations line up with the rows by construction.
+         See src/popup/sprocket.ts. -->
 
     <div class="strip">
-      <div class="head">
+      <div class="head perf">
         <div class="head-top">
           <h1 id="title" data-i18n="popupTitle"></h1>
           <button
@@ -30,7 +31,7 @@
         <p class="subtitle" id="subtitle"></p>
       </div>
 
-      <p class="message" id="message" hidden></p>
+      <p class="message perf" id="message" hidden></p>
 
       <!-- First open only: unexposed frames waiting to be marked. Built in JS
            so the strip is markup, not an illustration (spec §6 forbids those). -->
@@ -41,19 +42,23 @@
 
       <div class="rows" id="rows"></div>
 
-      <div class="add">
+      <!-- Film running past the end of the sheet: plain, unexposed holes below
+           the last row. Filled at load; collapses when the rows fill the strip. -->
+      <div class="tail" id="tail" aria-hidden="true"></div>
+
+      <div class="add perf">
         <label class="sr-only" for="add-input" id="add-label" data-i18n="popupAddLabel"></label>
         <input id="add-input" type="text" autocomplete="off" spellcheck="false" />
         <button type="button" class="btn" id="add-button" data-i18n="popupAddAction"></button>
       </div>
 
-      <div class="transfer">
+      <div class="transfer perf">
         <button type="button" class="link" id="export" data-i18n="actionExport"></button>
         <button type="button" class="link" id="import" data-i18n="actionImport"></button>
         <input type="file" id="import-file" accept="application/json,.json" hidden />
       </div>
 
-      <div class="foot">
+      <div class="foot perf">
         <span class="sync-status" id="sync-status"></span>
         <button type="button" class="btn" id="refresh" data-i18n="actionRefresh"></button>
       </div>

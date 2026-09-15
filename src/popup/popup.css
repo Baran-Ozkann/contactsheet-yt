@@ -41,6 +41,11 @@
   --frame-hover: #3c4046;
 
   --sprocket-width: 16px;
+  /* Every frame reserves this much on its left edge: the sprocket gutter plus
+     the frame's own 16px padding. Content sits where it always did. */
+  --gutter: calc(var(--sprocket-width) + 16px);
+  /* Tail pitch — a row plus its 2px gap. Mirrored by PERF_PITCH in sprocket.ts. */
+  --perf-pitch: 44px;
   --stroke-ms: 180ms;
   --stroke-ease: cubic-bezier(0.2, 0.7, 0.3, 1);
 
@@ -56,44 +61,80 @@ body {
   width: 380px;
   height: 520px;
   margin: 0;
-  display: grid;
-  grid-template-columns: var(--sprocket-width) 1fr;
   background: var(--film);
   color: var(--emulsion);
   font: 400 14px/1.45 var(--body);
   overflow: hidden;
 }
 
-/* ---- sprocket strip: the one decorative element (spec §6.4) ---------------- */
+/* ---- sprocket strip (spec §6.4) --------------------------------------------
+   Not a standalone column on its own pitch: each frame draws its own hole in
+   the gutter it already reserves, so a row and its perforation cannot drift
+   apart whatever the row's height. Alignment is structural, not measured.
 
-.sprocket {
-  display: block;
-  width: var(--sprocket-width);
-  height: 100%;
+   Because every hole belongs to a frame, the strip can carry state — see the
+   grease rule below. */
+
+.perf {
+  position: relative;
 }
 
-.sprocket rect {
-  fill: var(--emulsion);
-  opacity: 0.55;
+.perf::before {
+  content: '';
+  position: absolute;
+  left: calc((var(--sprocket-width) - 8px) / 2);
+  top: 50%;
+  width: 8px;
+  height: 11px;
+  margin-top: -5.5px;
+  background: var(--emulsion);
+  opacity: 0.22;
+}
+
+/* The margin of marks. A struck frame's hole is grease, so which frames are
+   hidden reads at a glance without reading the list. Colour is not carrying
+   this on its own (§6.7) — the cross and aria-checked say the same thing. */
+.row.perf[aria-checked='true']::before {
+  background: var(--grease);
+  opacity: 1;
 }
 
 /* During a sync the holes light amber one after another, 2s loop. There is no
-   other spinner (spec §6.5). Amber means process; it is never used elsewhere. */
-body.is-syncing .sprocket rect {
+   other spinner (spec §6.5). Amber means process, and an animation outranks
+   every normal declaration — so it overrides the grease for as long as the
+   sync runs, then hands the hole straight back. */
+body.is-syncing .perf::before {
   animation: sprocket-run 2s linear infinite;
+  animation-delay: var(--perf-delay, 0s);
 }
 
 @keyframes sprocket-run {
   0%,
   40%,
   100% {
-    fill: var(--emulsion);
-    opacity: 0.55;
+    background-color: var(--emulsion);
+    opacity: 0.22;
   }
   15% {
-    fill: var(--safelight);
+    background-color: var(--safelight);
     opacity: 1;
   }
+}
+
+/* Below the last row the film runs past the end of the sheet: plain, unexposed
+   perforations on the nominal row pitch, belonging to no frame. */
+.tail {
+  /* Basis 0, not auto: the tail holds a strip's worth of cells, and an auto
+     basis would let that content height fight the frames for the 520px. It
+     takes the space the rows leave over and nothing else. */
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.tail-cell {
+  display: block;
+  height: var(--perf-pitch);
 }
 
 /* ---- strip ---------------------------------------------------------------- */
@@ -102,6 +143,7 @@ body.is-syncing .sprocket rect {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  width: 380px;
   height: 520px;
 }
 
@@ -114,7 +156,7 @@ body.is-syncing .sprocket rect {
 }
 
 .head {
-  padding: 14px 16px 12px;
+  padding: 14px 16px 12px var(--gutter);
 }
 
 .head-top {
@@ -174,8 +216,10 @@ h1 {
 
 /* ---- rows ----------------------------------------------------------------- */
 
+/* Shrinks rather than grows: the tail takes whatever is left below the last
+   row, and only when the rows outgrow the strip do they take it all back. */
 .rows {
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   overflow-y: auto;
   overflow-x: hidden;
   min-height: 0;
@@ -187,7 +231,7 @@ h1 {
   align-items: baseline;
   gap: 10px;
   width: 100%;
-  padding: 12px 16px;
+  padding: 12px 16px 12px var(--gutter);
   border: 0;
   background: var(--frame);
   color: inherit;
@@ -247,7 +291,7 @@ h1 {
      and the two strokes read as one deliberate mark rather than a full bleed.
      It still spans the full title, because a mark that stops short of the type
      it strikes is a decoration. */
-  inset: 7px 14px;
+  inset: 7px 14px 7px calc(var(--gutter) - 2px);
   pointer-events: none;
 }
 
@@ -284,7 +328,7 @@ h1 {
 .add {
   display: flex;
   gap: 8px;
-  padding: 12px 16px;
+  padding: 12px 16px 12px var(--gutter);
   background: var(--frame);
   margin-bottom: 2px;
 }
@@ -329,7 +373,7 @@ h1 {
 .transfer {
   display: flex;
   gap: 16px;
-  padding: 10px 16px;
+  padding: 10px 16px 10px var(--gutter);
   background: var(--frame);
   margin-bottom: 2px;
 }
@@ -354,7 +398,7 @@ h1 {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 12px 16px;
+  padding: 12px 16px 12px var(--gutter);
   margin-bottom: 0;
 }
 
@@ -377,7 +421,7 @@ body.is-syncing .sync-status {
    inside §6 — no gradient, no emoji, no illustration, no rounded card. */
 
 .empty {
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -393,7 +437,7 @@ body.is-syncing .sync-status {
   grid-template-columns: 28px 1fr;
   align-items: center;
   gap: 10px;
-  padding: 14px 16px;
+  padding: 14px 16px 14px var(--gutter);
   background: var(--frame);
   margin-bottom: 2px;
   position: relative;
@@ -431,7 +475,7 @@ body.is-syncing .sync-status {
 }
 
 .empty-copy {
-  margin: 14px 16px 0;
+  margin: 14px 16px 0 var(--gutter);
   color: var(--latent);
   font: 400 13px/1.5 var(--body);
 }
@@ -439,7 +483,7 @@ body.is-syncing .sync-status {
 /* ---- messages ------------------------------------------------------------- */
 
 .message {
-  padding: 14px 16px;
+  padding: 14px 16px 14px var(--gutter);
   background: var(--frame);
   margin-bottom: 2px;
   color: var(--latent);
@@ -470,8 +514,9 @@ body.is-syncing .sync-status {
   .master::after {
     transition: none;
   }
-  body.is-syncing .sprocket rect {
+  body.is-syncing .perf::before {
     animation: none;
-    fill: var(--safelight);
+    background-color: var(--safelight);
+    opacity: 1;
   }
 }
