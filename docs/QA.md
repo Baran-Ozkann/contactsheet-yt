@@ -31,6 +31,15 @@ Walk through this end to end at the close of every phase. Tick each item and rec
 - [ ] First open shows the explainer line and the unexposed frames
 - [ ] Export writes contactsheet-settings-YYYYMMDD.json; import restores it
 
+## Removing a playlist (FR-13)
+- [ ] The remove control is findable at a glance, without hunting for it
+- [ ] It still reads as secondary to the toggle, and its mark is not confused with the grease cross
+- [ ] Clicking it hits the control, never the toggle, anywhere in its 24x24 target
+- [ ] The confirmation names the playlist and says how many indexed videos go with it
+- [ ] Cancel leaves both the entry and the index untouched
+- [ ] Confirm deletes the settings entry **and** the stored index
+- [ ] Keyboard: the control is reachable by Tab, and focus lands on Cancel when the confirmation opens
+
 ## Edge cases
 - [ ] Signed out: nothing is hidden, no errors
 - [ ] With no playlists selected, the homepage is unchanged
@@ -40,7 +49,7 @@ Walk through this end to end at the close of every phase. Tick each item and rec
 
 ## Cleanup
 - [ ] After the extension is removed, no leftover styles or attributes remain on YouTube
-- [ ] No `console.debug` output in the production build
+- [x] No `console.debug` output in the production build — 2026-09-16, `npm run build:prod` then grep: only one `console.error` and one `console.warn` per bundle
 
 ## Performance (NFR-01)
 
