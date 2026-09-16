@@ -346,22 +346,33 @@ h1 {
    control nobody can find is not a control. */
 .remove {
   position: absolute;
-  top: 10px;
-  right: 8px;
-  width: 20px;
-  height: 20px;
+  /* A 24x24 target on a 43px row, centred against the title line rather than
+     the row, so a row carrying an L0 or partial note keeps the control where
+     the eye already found it. The glyph stays small; the target does not. */
+  top: 9px;
+  right: 5px;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
   padding: 0;
   border: 0;
+  border-radius: 2px;
   background: none;
   color: var(--latent);
-  font: 400 15px/1 var(--body);
-  opacity: 0.55;
+  font: 400 16px/1 var(--body);
   cursor: pointer;
 }
 
+/* Secondary means the quiet register, not a faded one: at 0.55 alpha the glyph
+   sat below the row note and read as an artifact rather than a control. It
+   rests at full --latent and lifts to --emulsion on a one-step-up surface.
+   Hovering it does not also hover the row: the control is a sibling above the
+   row, so it takes the pointer and .row:hover never matches. */
 .remove:hover,
 .remove:focus-visible {
-  opacity: 1;
+  background: var(--frame-hover);
+  color: var(--emulsion);
 }
 
 /* The confirmation is its own frame in the strip, under the row it belongs to:

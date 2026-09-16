@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import en from '../../_locales/en/messages.json';
 import {
@@ -9,6 +10,8 @@ import {
   type RowContext,
 } from '../../src/popup/rows.js';
 import type { PlaylistView } from '../../src/core/messaging.js';
+
+const css = readFileSync('src/popup/popup.css', 'utf8');
 
 /**
  * Removing a playlist (FR-13).
@@ -96,6 +99,19 @@ describe('the frame keeps the two actions apart', () => {
     const remove = buildRemove(view(), ctx);
     expect(remove.textContent).toBe('×');
     expect(remove.className).not.toMatch(/fa-|material|icon-/);
+  });
+
+  it('gives the control a target of at least 24x24 (spec §6.7)', () => {
+    const block = /^\.remove \{([^}]*)\}/m.exec(css)?.[1];
+    expect(block, 'no .remove rule in popup.css').toBeDefined();
+    const width = /\bwidth: (\d+)px/.exec(block!)?.[1];
+    const height = /\bheight: (\d+)px/.exec(block!)?.[1];
+    expect(Number(width), 'width').toBeGreaterThanOrEqual(24);
+    expect(Number(height), 'height').toBeGreaterThanOrEqual(24);
+    // A resting opacity is what made it read as an artifact rather than a
+    // control; the register is carried by the colour token instead.
+    expect(block).not.toMatch(/opacity:/);
+    expect(block).toMatch(/color: var\(--latent\)/);
   });
 });
 
