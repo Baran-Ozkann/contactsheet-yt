@@ -97,8 +97,16 @@ describe('the frame keeps the two actions apart', () => {
 
   it('carries no icon font or emoji (spec §6)', () => {
     const remove = buildRemove(view(), ctx);
-    expect(remove.textContent).toBe('×');
+    expect(remove.textContent).toBe('−');
     expect(remove.className).not.toMatch(/fa-|material|icon-/);
+  });
+
+  // The grease cross is the row's state mark. A second X-shaped glyph on the
+  // same row joins that visual family and reads as state, not as an action —
+  // and the two mean opposite things.
+  it('does not mark the row with a second cross', () => {
+    const remove = buildRemove(view(), ctx);
+    expect(remove.textContent).not.toMatch(/[x×✕✖✗✘❌]/i);
   });
 
   it('gives the control a target of at least 24x24 (spec §6.7)', () => {

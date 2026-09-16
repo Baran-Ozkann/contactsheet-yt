@@ -109,8 +109,11 @@ export function buildRemove(view: PlaylistView, ctx: RowContext): HTMLButtonElem
   remove.className = 'remove';
   remove.dataset.playlistId = view.id;
   remove.setAttribute('aria-label', ctx.t('popupRemoveLabel', view.title));
-  // A multiplication sign: not an icon font and not an emoji (spec §6).
-  remove.textContent = '×';
+  // A minus sign, not a cross: the grease cross is the row's state mark, and a
+  // second X on the same row reads as one more of those instead of an action.
+  // Removing an entry from a list is what a minus already means. Plain text,
+  // so still no icon font and no emoji (spec §6).
+  remove.textContent = '−';
   return remove;
 }
 
