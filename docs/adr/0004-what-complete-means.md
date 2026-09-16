@@ -1,6 +1,6 @@
 # ADR 0004 — What `complete` means
 
-- Status: accepted
+- Status: accepted — but it was not the bug it was written for; see the follow-up below
 - Date: 2026-09-16
 - Supersedes one implementation rule in [ADR-0002](0002-playlist-access.md)
 - Measurement: the manual QA pass of 2026-09-16, a real account, 13 playlists, one Refresh
@@ -82,6 +82,25 @@ the chain.
   fields ADR-0002 measured; real pages carry real ids and cannot be committed
   (spec §10 rule 11). `tests/unit/indexer-complete.test.ts` pins the rule in
   both directions, and its four lockup cases fail without the change.
+
+## Follow-up, 2026-09-16
+
+The change is right about what an empty 200 means: the spike confirmed against
+the real account that a token answering HTTP 200 with no items is the end of
+the playlist. It did not fix the reported symptom. Two things this ADR asserts
+turned out to be wrong, and they are recorded here rather than quietly edited
+out of the text above:
+
+- **The shape split is not what separates the playlists.** Both lists probed
+  came back in the old `playlistVideoRenderer` shape, not the lockup one, so
+  the table in the Context section describes the symptom rather than its cause.
+- **The twelve still report `complete:false`.** Whatever the indexer does on
+  the real path, the fixture cases do not reproduce it.
+
+The rule stated below stands on its own — an answer without videos is an
+answer, a silence is not — and the tests that pin it stay. The open bug is
+parked in `docs/BACKLOG.md`, where the next attempt is required to instrument
+a real sync before proposing a cause.
 
 ## Risks
 
