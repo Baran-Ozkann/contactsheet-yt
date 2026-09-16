@@ -62,6 +62,12 @@ Implementation rule: try the tokens in order, accept the first one that returns 
 and continue the chain through it. If none of them return anything, record the playlist
 at page-1 level with `complete:false`.
 
+> **Superseded by [ADR-0004](0004-what-complete-means.md) (2026-09-16).** The last sentence
+> holds only for a token that fails to answer. A lockup page carries a token whether or not
+> there is a page behind it, and such a token answers with an empty 200 — which is the end
+> of the playlist, not a failure. Reading it as failure marked twelve of thirteen real
+> playlists permanently incomplete.
+
 ## Consequences
 
 - **Reading `SAPISID` was removed entirely.** Spec §7 rule 15 is unnecessary; no cookie
