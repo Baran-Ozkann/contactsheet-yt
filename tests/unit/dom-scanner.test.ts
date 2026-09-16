@@ -11,10 +11,18 @@ const VISIBLE_VIDEO = 'aBcDeFgHiJk';
  * Two layout variants, per spec §8. Variant A is the current rich grid; variant
  * B is the lockup-based markup YouTube A/B tests, with none of the ytd-* names.
  */
-type Variant = 'A' | 'B';
+type Variant = 'A' | 'B' | 'C';
+
+const ITEM_TAG: Record<Variant, string> = {
+  A: 'ytd-rich-item-renderer',
+  B: 'yt-lockup-view-model',
+  // Variant C is a shape none of the selectors know, so it exercises the §5.3
+  // generic fallback end to end rather than only in isolation.
+  C: 'yt-future-grid-item',
+};
 
 function videoCard(doc: Document, variant: Variant, id: string): Element {
-  const el = doc.createElement(variant === 'A' ? 'ytd-rich-item-renderer' : 'yt-lockup-view-model');
+  const el = doc.createElement(ITEM_TAG[variant]);
   const a = doc.createElement('a');
   a.setAttribute('href', `/watch?v=${id}&pp=ygUKdGVzdA%3D%3D`);
   const thumb = doc.createElement('div'); // identity must survive nesting
@@ -24,7 +32,9 @@ function videoCard(doc: Document, variant: Variant, id: string): Element {
 }
 
 function playlistCard(doc: Document, variant: Variant, listId: string): Element {
-  const el = doc.createElement(variant === 'A' ? 'ytd-rich-section-renderer' : 'yt-lockup-view-model');
+  const el = doc.createElement(
+    variant === 'A' ? 'ytd-rich-section-renderer' : variant === 'B' ? 'yt-lockup-view-model' : 'yt-future-shelf',
+  );
   const a = doc.createElement('a');
   a.setAttribute('href', `/playlist?list=${listId}`);
   el.append(a);
@@ -71,7 +81,7 @@ beforeEach(() => {
   document.body.textContent = '';
 });
 
-describe.each<Variant>(['A', 'B'])('scanner over layout variant %s', (variant) => {
+describe.each<Variant>(['A', 'B', 'C'])('scanner over layout variant %s', (variant) => {
   it('hides a video card in the index and leaves the others alone', () => {
     const { grid } = buildGrid();
     const target = videoCard(document, variant, HIDDEN_VIDEO);

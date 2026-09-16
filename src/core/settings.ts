@@ -6,6 +6,7 @@ import {
   type PlaylistSetting,
   type Settings,
 } from './types.js';
+import { MAX_TITLE_LENGTH } from './schema.js';
 import { log } from './logger.js';
 
 const KEY = 'settings';
@@ -39,7 +40,7 @@ export function coerceSettings(raw: unknown): Settings {
       if (!isPlaylistId(id) || typeof value !== 'object' || value === null) continue;
       const entry = value as Partial<PlaylistSetting>;
       accumulator[id] = {
-        title: typeof entry.title === 'string' ? entry.title.slice(0, 200) : id,
+        title: typeof entry.title === 'string' ? entry.title.slice(0, MAX_TITLE_LENGTH) : id,
         hidden: entry.hidden === true,
         itemCount: isFiniteNumber(entry.itemCount) && entry.itemCount >= 0 ? Math.floor(entry.itemCount) : null,
         lastSyncedAt: isFiniteNumber(entry.lastSyncedAt) ? entry.lastSyncedAt : null,
@@ -73,4 +74,43 @@ export async function readSettings(): Promise<Settings> {
 /** Writes go through the service worker only, so no lock is needed here. */
 export async function writeSettings(next: Settings): Promise<void> {
   await chrome.storage.local.set({ [KEY]: coerceSettings(next) });
+}
+
+// ---- export / import (FR-10) -----------------------------------------------
+
+/** Spec FR-10: `contactsheet-settings-YYYYMMDD.json`. */
+export function settingsFilename(now: Date = new Date()): string {
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  return `contactsheet-settings-${y}${m}${d}.json`;
+}
+
+/**
+ * Settings only — never the index (spec FR-10). The index is derived data that
+ * a sync rebuilds, it is far larger, and it is the part that actually lists
+ * what the user watches. Keeping it out of an exported file means a settings
+ * backup is not a record of anyone's viewing.
+ */
+export function exportSettings(settings: Settings): string {
+  const safe = coerceSettings(settings);
+  return `${JSON.stringify(safe, null, 2)}\n`;
+}
+
+/**
+ * Parses an exported file. Anything unrecognised degrades to defaults rather
+ * than throwing, and a file that is not an object at all is rejected outright
+ * so an accidental import cannot silently wipe settings.
+ */
+export function importSettings(text: string): Settings | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    return null;
+  }
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return null;
+  // An index smuggled into the file is dropped here: coerceSettings only ever
+  // copies the fields it knows about.
+  return coerceSettings(parsed);
 }

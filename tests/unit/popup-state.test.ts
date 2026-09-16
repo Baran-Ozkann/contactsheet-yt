@@ -68,6 +68,7 @@ describe('buildPopupState', () => {
       itemCount: 2,
       indexedCount: 2,
       complete: true,
+      partial: false,
       layer: 'L2',
       lastSyncedAt: 99,
     });
@@ -120,6 +121,48 @@ describe('buildPopupState', () => {
     // readSettings also fails, so this is the fully-degraded case.
     const state = await buildPopupState();
     expect(state.playlists).toEqual([]);
+  });
+});
+
+describe('partial reporting', () => {
+  async function stateFor(itemCount: number | null, ids: string[], complete: boolean) {
+    await writeSettings({
+      ...DEFAULT_SETTINGS,
+      playlists: { WL: { title: 'a', hidden: true, itemCount, lastSyncedAt: null } },
+    });
+    await writeIndex({ playlistId: 'WL', videoIds: ids, syncedAt: 1, complete });
+    return (await buildPopupState()).playlists[0];
+  }
+
+  it('does not call a full index partial just because the flag is false', async () => {
+    // The 2026-09-14 regression: "32 of 32" reported as partial.
+    const row = await stateFor(2, [A, B], false);
+    expect(row?.indexedCount).toBe(2);
+    expect(row?.itemCount).toBe(2);
+    expect(row?.partial).toBe(false);
+  });
+
+  it('reports partial when a shortfall is demonstrable', async () => {
+    const row = await stateFor(5, [A, B], false);
+    expect(row?.partial).toBe(true);
+  });
+
+  it('never reports partial when the chain completed', async () => {
+    const row = await stateFor(5, [A, B], true);
+    expect(row?.partial).toBe(false);
+  });
+
+  it('does not claim partial when the total is unknown', async () => {
+    // Without an itemCount there is no shortfall to show, so "2/2" would be
+    // an invention.
+    const row = await stateFor(null, [A, B], false);
+    expect(row?.partial).toBe(false);
+  });
+
+  it('does not report partial for an empty index — that is L0, not partial', async () => {
+    const row = await stateFor(5, [], false);
+    expect(row?.partial).toBe(false);
+    expect(row?.layer).toBe('L0');
   });
 });
 

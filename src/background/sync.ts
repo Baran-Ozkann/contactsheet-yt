@@ -1,4 +1,4 @@
-import { coerceIndexEntry } from '../core/schema.js';
+import { MAX_TITLE_LENGTH, coerceIndexEntry } from '../core/schema.js';
 import { indexKey, pruneIndexes, writeIndex } from '../core/index-store.js';
 import type { Layer, PlaylistView, PopupState } from '../core/messaging.js';
 import { readSettings, writeSettings } from '../core/settings.js';
@@ -64,8 +64,28 @@ export function acceptEntries(raw: unknown): IndexEntry[] {
   return out;
 }
 
+/**
+ * Titles arrive from a content script, so they are re-validated here (§7.8).
+ * Display-only, never used for matching, so a rejected title costs a name and
+ * nothing else.
+ */
+export function acceptTitles(raw: unknown): Record<PlaylistId, string> {
+  const out: Record<PlaylistId, string> = {};
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return out;
+  for (const [id, value] of Object.entries(raw)) {
+    if (!isPlaylistId(id) || typeof value !== 'string') continue;
+    const title = value.replace(/\s+/g, ' ').trim().slice(0, MAX_TITLE_LENGTH);
+    if (title === '') continue;
+    out[id] = title;
+  }
+  return out;
+}
+
 /** Persists index entries and stamps the matching settings metadata. */
-export async function persistEntries(entries: readonly IndexEntry[]): Promise<number> {
+export async function persistEntries(
+  entries: readonly IndexEntry[],
+  titles: Readonly<Record<string, string>> = {},
+): Promise<number> {
   if (entries.length === 0) return 0;
   return serializeWrite(async () => {
     const settings = await readSettings();
@@ -75,6 +95,11 @@ export async function persistEntries(entries: readonly IndexEntry[]): Promise<nu
       if (existing) {
         existing.itemCount = entry.videoIds.length;
         existing.lastSyncedAt = entry.syncedAt;
+        // The id stands in until a sync resolves the real name (spec §4.1).
+        // A sync that resolved no title leaves whatever is stored alone, so a
+        // known name is never demoted back to the id by a later bad page.
+        const title = titles[entry.playlistId];
+        if (title !== undefined) existing.title = title;
       }
     }
     await writeSettings(settings);
@@ -124,10 +149,11 @@ async function runSync(playlistIds?: readonly PlaylistId[]): Promise<SyncOutcome
     return { ok: false, reason: 'no-response' };
   }
 
-  const entries = acceptEntries((response as { entries?: unknown } | null)?.entries);
+  const reply = response as { entries?: unknown; titles?: unknown } | null;
+  const entries = acceptEntries(reply?.entries);
   if (entries.length === 0) return { ok: false, reason: 'no-response' };
 
-  const written = await persistEntries(entries);
+  const written = await persistEntries(entries, acceptTitles(reply?.titles));
   await serializeWrite(async () => {
     await pruneIndexes(await readSettings());
   });
@@ -172,13 +198,20 @@ export async function buildPopupState(): Promise<PopupState> {
   const playlists: PlaylistView[] = ids.map((id) => {
     const setting = settings.playlists[id];
     const entry = coerceIndexEntry(stored[indexKey(id)], id);
+    const indexedCount = entry?.videoIds.length ?? 0;
+    const itemCount = setting?.itemCount ?? null;
+    const complete = entry?.complete ?? false;
     return {
       id,
       title: setting?.title ?? id,
       hidden: setting?.hidden ?? false,
-      itemCount: setting?.itemCount ?? null,
-      indexedCount: entry?.videoIds.length ?? 0,
-      complete: entry?.complete ?? false,
+      itemCount,
+      indexedCount,
+      complete,
+      // Reporting "32/32" as partial is worse than saying nothing: it tells the
+      // user something is missing when nothing is. A shortfall has to be
+      // demonstrable — a known total we genuinely hold fewer than.
+      partial: !complete && indexedCount > 0 && itemCount !== null && indexedCount < itemCount,
       layer: layerFor(entry),
       lastSyncedAt: setting?.lastSyncedAt ?? null,
     };

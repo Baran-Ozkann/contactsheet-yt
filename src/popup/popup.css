@@ -25,17 +25,27 @@
 
 :root {
   /* Spec §6.2 */
-  --film: #2b2f27;
-  --frame: #343a31;
-  --emulsion: #d6d2c4;
-  /* Spec's #8E9184 measures 3.64:1 on --frame, short of the 4.5:1 §6.7
-     requires. §6.7 says to verify and adjust the token, so this is the minimal
-     hue-preserving lift: 4.59:1 on --frame, 5.35:1 on --film. */
-  --latent: #a0a495;
+  --film: #24262a;
+  --frame: #34373d;
+  --emulsion: #e4e1da;
+  /* #9A9DA4 measures 4.39:1 on --frame, just short of the 4.5:1 §6.7 requires,
+     and rows sit on --frame. #A0A3AA is the minimal hue-preserving lift with
+     headroom rather than landing exactly on the threshold: 4.72:1 on --frame,
+     6.00:1 on --film. */
+  --latent: #a0a3aa;
   --grease: #d0342c;
   --safelight: #e8a33d;
 
+  /* Derived, not part of the §6.2 palette: one step up from --frame. Was a
+     hardcoded olive left over from the previous palette. */
+  --frame-hover: #3c4046;
+
   --sprocket-width: 16px;
+  /* Every frame reserves this much on its left edge: the sprocket gutter plus
+     the frame's own 16px padding. Content sits where it always did. */
+  --gutter: calc(var(--sprocket-width) + 16px);
+  /* Tail pitch — a row plus its 2px gap. Mirrored by PERF_PITCH in sprocket.ts. */
+  --perf-pitch: 44px;
   --stroke-ms: 180ms;
   --stroke-ease: cubic-bezier(0.2, 0.7, 0.3, 1);
 
@@ -51,44 +61,80 @@ body {
   width: 380px;
   height: 520px;
   margin: 0;
-  display: grid;
-  grid-template-columns: var(--sprocket-width) 1fr;
   background: var(--film);
   color: var(--emulsion);
   font: 400 14px/1.45 var(--body);
   overflow: hidden;
 }
 
-/* ---- sprocket strip: the one decorative element (spec §6.4) ---------------- */
+/* ---- sprocket strip (spec §6.4) --------------------------------------------
+   Not a standalone column on its own pitch: each frame draws its own hole in
+   the gutter it already reserves, so a row and its perforation cannot drift
+   apart whatever the row's height. Alignment is structural, not measured.
 
-.sprocket {
-  display: block;
-  width: var(--sprocket-width);
-  height: 100%;
+   Because every hole belongs to a frame, the strip can carry state — see the
+   grease rule below. */
+
+.perf {
+  position: relative;
 }
 
-.sprocket rect {
-  fill: var(--emulsion);
-  opacity: 0.55;
+.perf::before {
+  content: '';
+  position: absolute;
+  left: calc((var(--sprocket-width) - 8px) / 2);
+  top: 50%;
+  width: 8px;
+  height: 11px;
+  margin-top: -5.5px;
+  background: var(--emulsion);
+  opacity: 0.22;
+}
+
+/* The margin of marks. A struck frame's hole is grease, so which frames are
+   hidden reads at a glance without reading the list. Colour is not carrying
+   this on its own (§6.7) — the cross and aria-checked say the same thing. */
+.row.perf[aria-checked='true']::before {
+  background: var(--grease);
+  opacity: 1;
 }
 
 /* During a sync the holes light amber one after another, 2s loop. There is no
-   other spinner (spec §6.5). Amber means process; it is never used elsewhere. */
-body.is-syncing .sprocket rect {
+   other spinner (spec §6.5). Amber means process, and an animation outranks
+   every normal declaration — so it overrides the grease for as long as the
+   sync runs, then hands the hole straight back. */
+body.is-syncing .perf::before {
   animation: sprocket-run 2s linear infinite;
+  animation-delay: var(--perf-delay, 0s);
 }
 
 @keyframes sprocket-run {
   0%,
   40%,
   100% {
-    fill: var(--emulsion);
-    opacity: 0.55;
+    background-color: var(--emulsion);
+    opacity: 0.22;
   }
   15% {
-    fill: var(--safelight);
+    background-color: var(--safelight);
     opacity: 1;
   }
+}
+
+/* Below the last row the film runs past the end of the sheet: plain, unexposed
+   perforations on the nominal row pitch, belonging to no frame. */
+.tail {
+  /* Basis 0, not auto: the tail holds a strip's worth of cells, and an auto
+     basis would let that content height fight the frames for the 520px. It
+     takes the space the rows leave over and nothing else. */
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.tail-cell {
+  display: block;
+  height: var(--perf-pitch);
 }
 
 /* ---- strip ---------------------------------------------------------------- */
@@ -97,6 +143,7 @@ body.is-syncing .sprocket rect {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  width: 380px;
   height: 520px;
 }
 
@@ -109,7 +156,7 @@ body.is-syncing .sprocket rect {
 }
 
 .head {
-  padding: 14px 16px 12px;
+  padding: 14px 16px 12px var(--gutter);
 }
 
 .head-top {
@@ -169,8 +216,10 @@ h1 {
 
 /* ---- rows ----------------------------------------------------------------- */
 
+/* Shrinks rather than grows: the tail takes whatever is left below the last
+   row, and only when the rows outgrow the strip do they take it all back. */
 .rows {
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   overflow-y: auto;
   overflow-x: hidden;
   min-height: 0;
@@ -182,7 +231,8 @@ h1 {
   align-items: baseline;
   gap: 10px;
   width: 100%;
-  padding: 12px 16px;
+  /* The right pad clears the remove control, which overlays this edge. */
+  padding: 12px 34px 12px var(--gutter);
   border: 0;
   background: var(--frame);
   color: inherit;
@@ -190,6 +240,9 @@ h1 {
   text-align: left;
   cursor: pointer;
   position: relative;
+  /* Structural guarantee that the cross can never reach a neighbouring row,
+     whatever its geometry ends up being. */
+  overflow: hidden;
 }
 
 /* Film frame numbering — legitimate because the content really is an ordered
@@ -220,25 +273,48 @@ h1 {
   color: var(--latent);
   font: 400 11px/1.4 var(--condensed);
   font-variant-numeric: tabular-nums;
+  /* A long id or title must clip, never widen the row (item 5). */
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .row[aria-checked='true'] .row-count {
   color: var(--grease);
 }
 
-/* The grease-pencil cross, drawn over the whole frame. */
+/* The grease-pencil cross. Redaction means striking through, not erasing: this
+   is a mark laid over the type, so the title has to stay readable underneath. */
 .cross {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  /* A fixed box, not one stretched to the row. The left inset clears the
+     sprocket gutter so the mark strikes the frame rather than its hole; the
+     right inset keeps it off the frame edge. Width is therefore exactly 336px
+     on every row, and the height is declared rather than derived, so the
+     viewBox in cross.ts maps 1:1 onto it. Stretching the box was what broke
+     the mark: see the comment there.
+
+     Top-anchored, so the mark lands on the title whether or not the row
+     carries an L0 or partial note underneath. */
+  inset: 6px 14px auto calc(var(--gutter) - 2px);
+  height: 30px;
   pointer-events: none;
 }
 
 .cross path {
   stroke: var(--grease);
-  stroke-width: 2.25;
+  /* No vector-effect. The box above is 1:1 with the viewBox, so a user unit is
+     a device pixel and the stroke needs no compensation. That also leaves
+     stroke-dasharray in the same coordinate system pathLength normalises
+     against — mixing non-scaling-stroke with pathLength is what made the mark
+     render as a stub of itself. */
+  /* Weight and opacity, not geometry, are what keep the title readable. The
+     strokes run straight over the type; at 1.25px and 0.55 alpha the letters
+     read through the mark instead of being erased by it. */
+  stroke-width: 1.25;
   stroke-linecap: round;
+  stroke-opacity: 0.55;
   fill: none;
   stroke-dasharray: 1;
   stroke-dashoffset: 1;
@@ -254,12 +330,101 @@ h1 {
   stroke-dashoffset: 0;
 }
 
+/* ---- removing a playlist (FR-13) -------------------------------------------
+   The frame has no appearance of its own: the row keeps the background, the
+   padding, the perforation and the cross. It exists only to give the remove
+   control something to position against, because the row is a <button> and a
+   button may not contain another one. */
+
+.frame {
+  position: relative;
+}
+
+/* Quiet by construction (§6.5): no button chrome, no accent, the same register
+   as Export/Import. Toggling is the primary action and this must not compete
+   with it — but it is always rendered rather than revealed on hover, because a
+   control nobody can find is not a control. */
+.remove {
+  position: absolute;
+  /* A 24x24 target on a 43px row, centred against the title line rather than
+     the row, so a row carrying an L0 or partial note keeps the control where
+     the eye already found it. The glyph stays small; the target does not. */
+  top: 9px;
+  right: 5px;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 2px;
+  background: none;
+  color: var(--latent);
+  font: 400 16px/1 var(--body);
+  cursor: pointer;
+}
+
+/* Secondary means the quiet register, not a faded one: at 0.55 alpha the glyph
+   sat below the row note and read as an artifact rather than a control. It
+   rests at full --latent and lifts to --emulsion on a one-step-up surface.
+   Hovering it does not also hover the row: the control is a sibling above the
+   row, so it takes the pointer and .row:hover never matches. */
+.remove:hover,
+.remove:focus-visible {
+  background: var(--frame-hover);
+  color: var(--emulsion);
+}
+
+/* The confirmation is its own frame in the strip, under the row it belongs to:
+   a 380x520 popup has no room for an overlay and does not need one. */
+.confirm {
+  padding: 12px 16px 12px var(--gutter);
+  background: var(--frame);
+  margin-bottom: 2px;
+}
+
+.confirm-question {
+  margin: 0;
+  font: 500 13px/1.3 var(--body);
+}
+
+.confirm-consequence {
+  margin: 4px 0 0;
+  color: var(--latent);
+  font: 400 11px/1.4 var(--condensed);
+  font-variant-numeric: tabular-nums;
+}
+
+.confirm-actions {
+  display: flex;
+  gap: 16px;
+  margin-top: 10px;
+}
+
+/* The destructive choice names itself in grease — this is a decision, which is
+   what the colour is for (§6.2). Cancel stays in the secondary register, and
+   neither takes button chrome. */
+.confirm-yes {
+  color: var(--grease);
+}
+
+.confirm-yes:hover {
+  color: var(--grease);
+  text-decoration: underline;
+}
+
+/* While a frame is confirming its own remove control would be a third choice
+   in a two-choice moment. */
+.frame.is-confirming .remove {
+  visibility: hidden;
+}
+
 /* ---- manual entry (FR-11) ------------------------------------------------- */
 
 .add {
   display: flex;
   gap: 8px;
-  padding: 12px 16px;
+  padding: 12px 16px 12px var(--gutter);
   background: var(--frame);
   margin-bottom: 2px;
 }
@@ -289,12 +454,37 @@ h1 {
 
 .btn:hover:not(:disabled),
 .row:hover {
-  background: #3b4238;
+  background: var(--frame-hover);
 }
 
 .btn:disabled {
   color: var(--latent);
   cursor: default;
+}
+
+/* ---- export / import (FR-10) ---------------------------------------------
+   §6.4 does not draw these, so they are kept to the quietest weight the sheet
+   has: condensed secondary type, no button chrome, no third accent. */
+
+.transfer {
+  display: flex;
+  gap: 16px;
+  padding: 10px 16px 10px var(--gutter);
+  background: var(--frame);
+  margin-bottom: 2px;
+}
+
+.link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--latent);
+  font: 400 11px/1.4 var(--condensed);
+  cursor: pointer;
+}
+
+.link:hover {
+  color: var(--emulsion);
 }
 
 /* ---- foot ----------------------------------------------------------------- */
@@ -304,7 +494,7 @@ h1 {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 12px 16px;
+  padding: 12px 16px 12px var(--gutter);
   margin-bottom: 0;
 }
 
@@ -321,10 +511,75 @@ body.is-syncing .sync-status {
   color: var(--safelight);
 }
 
+/* ---- empty state ----------------------------------------------------------
+   The one place the film-strip idea is pushed further: unexposed frames waiting
+   to be marked. Built from the same boxes and rules as a real row, so it stays
+   inside §6 — no gradient, no emoji, no illustration, no rounded card. */
+
+.empty {
+  flex: 0 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.ghost-strip {
+  flex: none;
+}
+
+.ghost {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px 14px var(--gutter);
+  background: var(--frame);
+  margin-bottom: 2px;
+  position: relative;
+  overflow: hidden;
+}
+
+.ghost-no {
+  color: var(--latent);
+  font: 400 11px/1.4 var(--condensed);
+  font-variant-numeric: tabular-nums;
+  opacity: 0.45;
+}
+
+/* Where a title would sit once the frame is exposed. */
+.ghost-bar {
+  height: 9px;
+  background: var(--latent);
+  opacity: 0.16;
+}
+
+.ghost:nth-child(2) .ghost-bar {
+  width: 62%;
+}
+
+.ghost:nth-child(3) .ghost-bar {
+  width: 44%;
+}
+
+/* One frame carries the mark already, at a fraction of its strength: it shows
+   what the gesture does without explaining it. */
+.ghost .cross path {
+  stroke-dashoffset: 0;
+  stroke-opacity: 0.14;
+  transition: none;
+}
+
+.empty-copy {
+  margin: 14px 16px 0 var(--gutter);
+  color: var(--latent);
+  font: 400 13px/1.5 var(--body);
+}
+
 /* ---- messages ------------------------------------------------------------- */
 
 .message {
-  padding: 14px 16px;
+  padding: 14px 16px 14px var(--gutter);
   background: var(--frame);
   margin-bottom: 2px;
   color: var(--latent);
@@ -355,8 +610,9 @@ body.is-syncing .sync-status {
   .master::after {
     transition: none;
   }
-  body.is-syncing .sprocket rect {
+  body.is-syncing .perf::before {
     animation: none;
-    fill: var(--safelight);
+    background-color: var(--safelight);
+    opacity: 1;
   }
 }

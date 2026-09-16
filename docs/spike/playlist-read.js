@@ -10,7 +10,9 @@
  * Reads only. Sends nothing anywhere. Prints counts, never ids or cookies.
  */
 (async () => {
-  const LISTS = ['WL', 'LL']; // add a long "PL..." id to exercise continuations
+  // Put your own ids here: WL plus one ordinary PL... list is enough to see
+  // both render shapes. Add a 200+ video list to exercise real continuations.
+  const LISTS = ['WL', 'LL'];
 
   const log = (c, ...a) => console.log('%c[read]', `color:${c};font-weight:600`, ...a);
   const ok = (...a) => log('#7FB069', ...a);
@@ -55,6 +57,22 @@
     return acc;
   }
 
+  /**
+   * Which render path served this page (ADR-0002). The two behave differently
+   * at the end of a playlist: the legacy one stops carrying a continuation
+   * token, the lockup one carries one whether or not there is a page behind it
+   * (ADR-0004).
+   */
+  function shape(n, acc = { lockup: 0, legacy: 0 }, d = 0) {
+    if (d > 60 || n === null || typeof n !== 'object') return acc;
+    for (const [k, v] of Object.entries(n)) {
+      if (k === 'lockupViewModel' && v && v.contentType === 'LOCKUP_CONTENT_TYPE_VIDEO') acc.lockup++;
+      else if (k === 'playlistVideoRenderer' && v && typeof v.videoId === 'string') acc.legacy++;
+      else if (typeof v === 'object') shape(v, acc, d + 1);
+    }
+    return acc;
+  }
+
   function tokens(n, acc = [], d = 0) {
     if (d > 60 || n === null || typeof n !== 'object') return acc;
     for (const [k, v] of Object.entries(n)) {
@@ -87,16 +105,27 @@
 
     const all = videoIds(data);
     const first = all.size;
+    const counts = shape(data);
     let candidates = [...new Set(tokens(data))];
-    out(`${id}: page 1 = ${first} video · ${candidates.length} token candidate(s)`);
+    const rendered = counts.lockup >= counts.legacy ? 'lockup (new)' : 'playlistVideoRenderer (old)';
+    out(`${id}: page 1 = ${first} video · ${rendered} · ${candidates.length} token candidate(s)`);
 
+    // ADR-0004: a token that ANSWERS with no videos ends the playlist; a token
+    // that does not answer leaves it unknown. This is the line that decides
+    // whether a one-page playlist is reported complete, so print both.
+    let answeredAll = true;
     let token = null;
     for (const t of candidates) {
       const { status, json } = await ask(t);
       const ids = videoIds(json);
+      if (status !== 200) answeredAll = false;
       out(`${id}: token probe -> HTTP ${status} · ${ids.size} video`);
       await new Promise((r) => setTimeout(r, 500));
       if (ids.size) { for (const v of ids) all.add(v); token = tokens(json)[0] ?? null; break; }
+    }
+    if (candidates.length && !token) {
+      out(`${id}: no token carried videos · every probe answered: ${answeredAll}`);
+      out(`${id}: the extension records complete:${answeredAll} (ADR-0004)`);
     }
 
     let pages = token || first ? 1 : 0;

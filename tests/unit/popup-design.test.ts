@@ -7,6 +7,27 @@ import { describe, expect, it } from 'vitest';
 // is vitest's working directory.
 const css = readFileSync('src/popup/popup.css', 'utf8');
 const html = readFileSync('src/popup/index.html', 'utf8');
+const spec = readFileSync('docs/SPEC.md', 'utf8');
+
+/** The palette as §6.2 declares it — the binding source, not a copy of it. */
+function specPalette(): Record<string, string> {
+  const block = /### 6\.2 Tokens\s*```([\s\S]*?)```/.exec(spec)?.[1] ?? '';
+  const out: Record<string, string> = {};
+  for (const line of block.split('\n')) {
+    const found = /^(--[a-z]+)\s+(#[0-9A-Fa-f]{6})/.exec(line.trim());
+    if (found?.[1] && found[2]) out[found[1]] = found[2].toLowerCase();
+  }
+  return out;
+}
+
+/** The palette as the stylesheet actually defines it. */
+function cssPalette(): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const m of css.matchAll(/(--(?:film|frame|emulsion|latent|grease|safelight)):\s*(#[0-9a-f]{6})/gi)) {
+    if (m[1] && m[2]) out[m[1]] = m[2].toLowerCase();
+  }
+  return out;
+}
 
 /**
  * Spec §6 is binding, and its "Forbidden" list is the part most likely to drift
@@ -41,10 +62,19 @@ describe('spec §6 forbidden list', () => {
 });
 
 describe('spec §6 required properties', () => {
-  it('declares the exact palette from §6.2', () => {
-    for (const token of ['#2b2f27', '#343a31', '#d6d2c4', '#d0342c', '#e8a33d']) {
-      expect(css.toLowerCase()).toContain(token);
-    }
+  it('declares the exact palette §6.2 specifies, with no drift', () => {
+    const fromSpec = specPalette();
+    // Guard the guard: if the spec block ever stops parsing, this assertion
+    // would pass against an empty object and prove nothing.
+    expect(Object.keys(fromSpec).sort()).toEqual([
+      '--emulsion',
+      '--film',
+      '--frame',
+      '--grease',
+      '--latent',
+      '--safelight',
+    ]);
+    expect(cssPalette()).toEqual(fromSpec);
   });
 
   it('is a 380 x 520 popup (§6.4)', () => {
@@ -72,6 +102,52 @@ describe('spec §6 required properties', () => {
     expect(css).toMatch(/outline-offset:\s*2px/);
   });
 
+  it('contains the cross inside its own row', () => {
+    // A structural guarantee that no future geometry can reach the neighbour.
+    // Where the cross sits and how it scales is measured against the rendered
+    // svg in popup-cross.test.ts, not asserted as stylesheet text here.
+    expect(css).toMatch(/\.row\s*\{[^}]*overflow:\s*hidden/);
+  });
+
+  it('keeps the cross thin enough to read type through (item 1)', () => {
+    // Weight and opacity only. Whether the strokes actually reach the type is
+    // a rendering question, and popup-cross.test.ts measures it there.
+    const width = /\.cross path\s*\{[^}]*stroke-width:\s*([\d.]+)/.exec(css)?.[1];
+    expect(Number(width)).toBeLessThanOrEqual(1.25);
+    const opacity = /\.cross path\s*\{[^}]*stroke-opacity:\s*([\d.]+)/.exec(css)?.[1];
+    expect(Number(opacity)).toBeGreaterThan(0);
+    expect(Number(opacity)).toBeLessThanOrEqual(0.6);
+  });
+
+  it.each([
+    ['.row-title', /\.row-title\s*\{[^}]*\}/],
+    ['.row-note', /\.row-note\s*\{[^}]*\}/],
+  ])('truncates %s rather than widening the row (item 5)', (_name, blockPattern) => {
+    const block = blockPattern.exec(css)?.[0] ?? '';
+    expect(block).not.toBe('');
+    expect(block).toMatch(/text-overflow:\s*ellipsis/);
+    expect(block).toMatch(/white-space:\s*nowrap/);
+    expect(block).toMatch(/overflow:\s*hidden/);
+  });
+
+  it('builds the empty state from frames, not an illustration (item 7)', () => {
+    expect(html).toMatch(/id="ghost-strip"/);
+    expect(css).toMatch(/\.ghost\s*\{/);
+    // A bar where a title would sit, and a mark already on one frame at a
+    // fraction of its strength — boxes and rules only.
+    expect(css).toMatch(/\.ghost-bar\s*\{/);
+    expect(css).toMatch(/\.ghost \.cross path\s*\{[^}]*stroke-opacity:\s*0?\.14/);
+    expect(css).not.toMatch(/\.ghost[^{]*\{[^}]*border-radius/);
+  });
+
+  it('uses palette tokens for hover rather than a stray hex', () => {
+    const hovers = css.match(/:hover[^{]*\{[^}]*\}/g) ?? [];
+    expect(hovers.length).toBeGreaterThan(0);
+    for (const block of hovers) {
+      expect(block).not.toMatch(/#[0-9a-f]{3,6}/i);
+    }
+  });
+
   it('honours prefers-reduced-motion (§6.5)', () => {
     expect(css).toMatch(/@media\s*\(prefers-reduced-motion:\s*reduce\)/);
   });
@@ -97,28 +173,46 @@ describe('spec §6.7 accessibility', () => {
     return (hi + 0.05) / (lo + 0.05);
   }
 
-  const film = '#2b2f27';
-  const frame = '#343a31';
+  // Read the surfaces from the stylesheet rather than repeating them. Hardcoded
+  // copies silently go stale the moment the palette changes, and then this
+  // block measures a palette that no longer exists.
+  const palette = cssPalette();
+  const film = palette['--film'] ?? '';
+  const frame = palette['--frame'] ?? '';
 
-  const TOKEN_PATTERNS = {
-    emulsion: /--emulsion:\s*(#[0-9a-f]{6})/i,
-    latent: /--latent:\s*(#[0-9a-f]{6})/i,
-  };
-
-  function token(name: keyof typeof TOKEN_PATTERNS): string {
-    return TOKEN_PATTERNS[name].exec(css)?.[1] ?? '';
-  }
+  it('resolves every colour it measures', () => {
+    for (const name of ['--film', '--frame', '--emulsion', '--latent']) {
+      expect(palette[name], name).toMatch(/^#[0-9a-f]{6}$/);
+    }
+  });
 
   it('emulsion reaches 7:1 on both surfaces', () => {
-    expect(ratio(token('emulsion'), film)).toBeGreaterThanOrEqual(7);
-    expect(ratio(token('emulsion'), frame)).toBeGreaterThanOrEqual(7);
+    expect(ratio(palette['--emulsion'] ?? '', film)).toBeGreaterThanOrEqual(7);
+    expect(ratio(palette['--emulsion'] ?? '', frame)).toBeGreaterThanOrEqual(7);
   });
 
   it('latent reaches 4.5:1 on both surfaces', () => {
-    // Rows sit on --frame, which is the binding surface. The spec's original
-    // #8E9184 measured 3.64:1 there; §6.7 says to verify and adjust the token.
-    expect(ratio(token('latent'), frame)).toBeGreaterThanOrEqual(4.5);
-    expect(ratio(token('latent'), film)).toBeGreaterThanOrEqual(4.5);
+    // Rows sit on --frame, which is the binding surface — it is the one that
+    // fails first, and the one §6.7's "adjust the token" clause is aimed at.
+    expect(ratio(palette['--latent'] ?? '', frame)).toBeGreaterThanOrEqual(4.5);
+    expect(ratio(palette['--latent'] ?? '', film)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it('keeps the two surfaces far enough apart that the 2px gaps read (§6.4)', () => {
+    // The gaps are the only separator between rows; too close and the strip
+    // reads as one block, which is what the olive palette did. WCAG's ratio
+    // compresses hard at the dark end (the old pair scored 1.167, the new one
+    // 1.270 — barely distinguishable as numbers), so separation is measured as
+    // a plain luminance ratio, where the step is 1.48x versus 1.97x.
+    const lin = (c: number): number => {
+      const v = c / 255;
+      return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+    };
+    const lum = (hex: string): number => {
+      const n = parseInt(hex.slice(1), 16);
+      return 0.2126 * lin((n >> 16) & 255) + 0.7152 * lin((n >> 8) & 255) + 0.0722 * lin(n & 255);
+    };
+    expect(lum(frame) / lum(film)).toBeGreaterThanOrEqual(1.8);
   });
 
   it('gives every row a switch role and the master toggle a label', () => {

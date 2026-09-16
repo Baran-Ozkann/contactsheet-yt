@@ -2,6 +2,7 @@ import {
   extractClientConfig,
   extractContinuationTokens,
   extractPlaylistTitle,
+  extractTitleFromHtml,
   extractVideoIds,
   extractYtInitialData,
   fetchContinuation,
@@ -108,7 +109,9 @@ export async function indexPlaylist(
   const page1 = extractYtInitialData(html);
   if (page1 === undefined) return finish(false, 0);
 
-  title = extractPlaylistTitle(page1);
+  // The JSON shapes are inferred and demonstrably miss on some real responses,
+  // so the document title is the fallback rather than giving up to the id.
+  title = extractPlaylistTitle(page1) ?? extractTitleFromHtml(html);
   absorb(extractVideoIds(page1));
   options.onProgress?.({ playlistId, videoCount: videoIds.length, pages: 0 });
 
@@ -128,6 +131,15 @@ export async function indexPlaylist(
   const usedTokens = new Set<string>();
   let established = false;
   let pages = 0;
+  /**
+   * Whether every token we asked has actually come back with an answer.
+   *
+   * This is the difference between two things that look identical from the
+   * call site. A token that answers and carries no videos has told us
+   * something: there is no video continuation behind it. A token that never
+   * answers has told us nothing, and nothing is what "incomplete" means.
+   */
+  let everyRequestAnswered = true;
 
   while (pages < maxPages) {
     if (signal?.aborted) return finish(false, pages);
@@ -146,7 +158,10 @@ export async function indexPlaylist(
       if (signal?.aborted) return finish(false, pages);
 
       const candidateResponse = await requestWithBackoff(token, config, { sleep, ...(signal ? { signal } : {}) });
-      if (candidateResponse === undefined) continue;
+      if (candidateResponse === undefined) {
+        everyRequestAnswered = false;
+        continue;
+      }
 
       const ids = extractVideoIds(candidateResponse);
       // An established chain may legitimately hand back a page with nothing new;
@@ -159,7 +174,15 @@ export async function indexPlaylist(
       break;
     }
 
-    if (!progressed) return finish(false, pages);
+    if (!progressed) {
+      // Every candidate answered, none carried a video, and no chain was ever
+      // established: there is nothing behind these tokens, so page 1 is the
+      // whole playlist. Reporting that as incomplete is what marked every
+      // lockup-shaped playlist partial forever — see ADR-0004. A request that
+      // failed outright still means incomplete, because a playlist that did
+      // not answer could hold anything.
+      return finish(!established && everyRequestAnswered, pages);
+    }
 
     pages += 1;
     established = true;
