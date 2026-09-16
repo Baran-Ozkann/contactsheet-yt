@@ -30,6 +30,7 @@ Walk through this end to end at the close of every phase. Tick each item and rec
 - [ ] A long title or id truncates instead of widening the row
 - [ ] First open shows the explainer line and the unexposed frames
 - [ ] Export writes contactsheet-settings-YYYYMMDD.json; import restores it
+- [ ] A one-page playlist in either render shape reports complete, not partly indexed (ADR-0004)
 
 ## Removing a playlist (FR-13)
 - [ ] The remove control is findable at a glance, without hunting for it
@@ -72,6 +73,25 @@ are far slower than Blink's — the DOM-free half of the work (URL parsing plus
 the two `Set.has` lookups) measures ~4 µs per card, so jsdom's DOM operations
 dominate by roughly 25×. Chrome should be comfortably faster. The real-browser
 number still has to come from a manual pass on the live homepage.
+
+## Notes from the 2026-09-16 pass
+
+**The worker-driven sync chain ran for real.** One Refresh indexed 13
+playlists and every one of them landed in storage: `sync:start` ->
+`findYouTubeTab` -> `tabs.sendMessage` -> `acceptEntries` -> `persistEntries`
+is confirmed in a browser. That closes the open item in the 2026-09-14 notes
+below.
+
+**Twelve of the thirteen reported `complete:false`.** All twelve are served in
+the lockup shape and all fit on one page; `WL`, the only legacy-shaped one, was
+the one that reported complete. Cause and fix: ADR-0004. If it comes back, run
+`docs/spike/playlist-read.js` over the affected ids and read the
+`token probe -> HTTP nnn` line — an empty 200 is the end of the playlist, no
+answer at all is a failure, and only the second one means incomplete.
+
+**Playlist ids are not a fixed length.** Several lists on the account carry
+13-character ids rather than 34 and index normally. `PLAYLIST_ID_RE` accepts 2
+to 64 characters, and nothing downstream keys off the length.
 
 ## Notes from the 2026-09-14 pass
 
