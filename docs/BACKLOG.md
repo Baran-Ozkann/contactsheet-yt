@@ -24,3 +24,16 @@ yet, tracked here so they stay visible.
   forbidden (§6.3 and §7 rule 1), so they must be vendored locally. Budget
   roughly 30–50 KB subset against the 300 KB NFR-06 ceiling.
 - **A popup screenshot in `docs/`** (spec §9, Phase 5 acceptance).
+
+## Noticed, not built
+
+Real weaknesses found during a pass that no spec item covers. Written down so
+they are not rediscovered from scratch.
+
+- **`itemCount` records what we indexed, not what the playlist holds.**
+  `persistEntries` stamps `itemCount = entry.videoIds.length`, so the popup's
+  shortfall test (`indexedCount < itemCount`) can essentially never fire and
+  the "partly indexed (N/M)" copy has no way to reach the user. Reading the
+  playlist's stated total would mean a new InnerTube shape, which spec §10
+  rule 2 forbids without a measurement — so it needs a spike first, not a
+  guess. Noticed 2026-09-16, during the ADR-0004 investigation.
