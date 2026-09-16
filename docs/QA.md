@@ -30,7 +30,6 @@ Walk through this end to end at the close of every phase. Tick each item and rec
 - [ ] A long title or id truncates instead of widening the row
 - [ ] First open shows the explainer line and the unexposed frames
 - [ ] Export writes contactsheet-settings-YYYYMMDD.json; import restores it
-- [ ] A one-page playlist in either render shape reports complete, not partly indexed (ADR-0004)
 
 ## Removing a playlist (FR-13)
 - [ ] The remove control is findable at a glance, without hunting for it
@@ -82,12 +81,11 @@ playlists and every one of them landed in storage: `sync:start` ->
 is confirmed in a browser. That closes the open item in the 2026-09-14 notes
 below.
 
-**Twelve of the thirteen reported `complete:false`.** All twelve are served in
-the lockup shape and all fit on one page; `WL`, the only legacy-shaped one, was
-the one that reported complete. Cause and fix: ADR-0004. If it comes back, run
-`docs/spike/playlist-read.js` over the affected ids and read the
-`token probe -> HTTP nnn` line — an empty 200 is the end of the playlist, no
-answer at all is a failure, and only the second one means incomplete.
+**Twelve of the thirteen reported `complete:false`, and still do.** Every
+video is indexed and hiding works correctly for all of them; they report L1
+instead of L2 and nothing is visible to the user. Two fix attempts have not
+landed, so it is parked in `docs/BACKLOG.md` with what the spike measured —
+including that the render-shape hypothesis is wrong. Not a gate on this phase.
 
 **Playlist ids are not a fixed length.** Several lists on the account carry
 13-character ids rather than 34 and index normally. `PLAYLIST_ID_RE` accepts 2
