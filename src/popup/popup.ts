@@ -3,6 +3,7 @@ import { buildCross } from './cross.js';
 import { buildTail, perforate } from './sprocket.js';
 import { buildConfirm, buildFrame, classifyClick, type RowContext } from './rows.js';
 import { exportSettings, importSettings, settingsFilename } from '../core/settings.js';
+import { MAX_JSON_BYTES } from '../core/schema.js';
 import type { Message, PopupState } from '../core/messaging.js';
 import type { PlaylistId } from '../core/types.js';
 
@@ -316,6 +317,12 @@ async function exportToFile(): Promise<void> {
 }
 
 async function importFromFile(file: File): Promise<void> {
+  // Checked before reading: importSettings would reject an oversized body
+  // anyway, but only after the whole file had been pulled into memory.
+  if (file.size > MAX_JSON_BYTES) {
+    showError('popupImportInvalid');
+    return;
+  }
   const settings = importSettings(await file.text());
   if (settings === null) {
     showError('popupImportInvalid');
