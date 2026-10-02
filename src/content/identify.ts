@@ -1,3 +1,4 @@
+import { ANY_LINK } from './selectors.js';
 import { isPlaylistId, isVideoId, type PlaylistId, type VideoId } from '../core/types.js';
 
 export interface CardIdentity {
@@ -45,7 +46,7 @@ export function identifyHref(href: string, base = 'https://www.youtube.com'): Ca
 
 /** Reads the first usable anchor inside a card element. */
 export function identifyElement(el: Element): CardIdentity {
-  const anchors = el.querySelectorAll('a[href]');
+  const anchors = el.querySelectorAll(ANY_LINK);
   for (const anchor of anchors) {
     const href = anchor.getAttribute('href');
     if (!href) continue;

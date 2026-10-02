@@ -1,4 +1,4 @@
-import { SELECTORS, firstMatch } from './selectors.js';
+import { IDENTIFIABLE_LINK, SELECTORS, firstMatch } from './selectors.js';
 import { identifyElement, type CardIdentity } from './identify.js';
 import { hide, isSeen, markSeen, unhide } from './hider.js';
 import type { PlaylistId, VideoId } from '../core/types.js';
@@ -119,7 +119,6 @@ export class BatchQueue<T> {
 
 const CARD_SELECTORS: readonly string[] = [...SELECTORS.item, ...SELECTORS.section];
 const CARD_SELECTOR_LIST = CARD_SELECTORS.join(',');
-const IDENTIFIABLE_LINK = 'a[href*="/watch"], a[href*="/playlist"]';
 
 /** Does this element match one of the known card shapes? */
 export function isKnownCard(el: Element): boolean {

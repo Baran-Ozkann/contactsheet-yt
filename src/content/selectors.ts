@@ -25,10 +25,36 @@ export const SELECTORS = {
   ],
 } as const;
 
+/**
+ * Links that identify a card. Used to recognise a card no layered selector
+ * knows (the §5.3 generic fallback), and to find the href to read once a card
+ * is recognised.
+ */
+export const IDENTIFIABLE_LINK = 'a[href*="/watch"], a[href*="/playlist"]';
+export const ANY_LINK = 'a[href]';
+
 export const HIDDEN_ATTR = 'data-cs-hidden';
 export const SEEN_ATTR = 'data-cs-seen';
 export const DEBUG_ATTR = 'data-cs-debug';
 export const STYLE_ID = 'cs-style';
+
+/** Everything we marked, whatever the value — teardown has to find it all. */
+export const HIDDEN_MARKED = `[${HIDDEN_ATTR}]`;
+export const SEEN_MARKED = `[${SEEN_ATTR}]`;
+
+/**
+ * The one stylesheet we inject. Hiding is an attribute plus this rule, never a
+ * write to the card's own style (spec §5.1).
+ */
+export const HIDING_CSS = `
+[${HIDDEN_ATTR}="1"] { display: none !important; }
+[${HIDDEN_ATTR}="1"][${DEBUG_ATTR}="1"] {
+  display: block !important;
+  opacity: .28;
+  outline: 2px solid #D0342C;
+  outline-offset: -2px;
+}
+`;
 
 export function firstMatch(root: ParentNode, slot: keyof typeof SELECTORS): Element | null {
   for (const selector of SELECTORS[slot]) {

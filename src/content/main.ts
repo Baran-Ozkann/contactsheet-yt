@@ -1,4 +1,4 @@
-import { DEBUG_ATTR, HIDDEN_ATTR, STYLE_ID } from './selectors.js';
+import { HIDING_CSS, STYLE_ID } from './selectors.js';
 import { Scanner, findGridContainer } from './scanner.js';
 import { clearSeen, unhideAll } from './hider.js';
 import { cancelSync, runSyncJob } from './sync-job.js';
@@ -15,21 +15,11 @@ import { log } from '../core/logger.js';
  * worker, which cannot reach the network itself (spec §2.1).
  */
 
-const CSS = `
-[${HIDDEN_ATTR}="1"] { display: none !important; }
-[${HIDDEN_ATTR}="1"][${DEBUG_ATTR}="1"] {
-  display: block !important;
-  opacity: .28;
-  outline: 2px solid #D0342C;
-  outline-offset: -2px;
-}
-`;
-
 function injectStyle(): void {
   if (document.getElementById(STYLE_ID)) return;
   const style = document.createElement('style');
   style.id = STYLE_ID;
-  style.textContent = CSS; // never innerHTML — spec §7.2
+  style.textContent = HIDING_CSS; // never innerHTML — spec §7.2
   (document.head ?? document.documentElement).append(style);
 }
 
