@@ -18,7 +18,7 @@ Walk through this end to end at the close of every phase. Tick each item and rec
 > **Still not covered by a manual pass:** signed-out behaviour, teardown
 > residue after removing the extension, and a second YouTube layout variant.
 > Verified in jsdom only. The first two are deliberate — each needs a separate
-> profile or an uninstall — and both are carried into Phase 7.
+> profile or an uninstall. All three are listed under *Deferred manual checks*.
 
 ## Popup (after Phase 5)
 - [x] Refresh drives the worker path and an index lands in storage — 2026-09-14, index:WL with 49 ids
@@ -29,7 +29,7 @@ Walk through this end to end at the close of every phase. Tick each item and rec
 - [x] A synced playlist shows its name, not its id — 2026-09-16, synced lists show their names
 - [x] A fully indexed playlist is not labelled partial — 2026-09-16, passes by construction, not by design — the copy is unreachable while itemCount records what we indexed (BACKLOG)
 - [x] A long title or id truncates instead of widening the row — 2026-09-16, long ids truncate
-- [x] First open shows the explainer line and the unexposed frames — 2026-09-16, part of the popup block
+- [ ] First open shows the explainer line and the unexposed frames — **not specifically checked**; the 2026-09-16 tick was retracted on 2026-10-02. Deferred, see below
 - [x] Export writes contactsheet-settings-YYYYMMDD.json; import restores it — 2026-09-16, dated file written, import restored it
 
 ## Removing a playlist (FR-13)
@@ -42,15 +42,36 @@ Walk through this end to end at the close of every phase. Tick each item and rec
 - [x] Keyboard: the control is reachable by Tab, and focus lands on Cancel when the confirmation opens — 2026-09-16, Tab reaches the control
 
 ## Edge cases
-- [ ] Signed out: nothing is hidden, no errors — **not walked**, needs a second browser profile; carried into Phase 7
+- [ ] Signed out: nothing is hidden, no errors — **not walked**, needs a second browser profile. Deferred
 - [x] With no playlists selected, the homepage is unchanged — 2026-09-16, homepage untouched
 - [x] With a corrupt or deleted index, the homepage does not go blank (fail-open) — 2026-09-14, homepage never blanked at any point
 - [x] Navigating away from the homepage and back re-runs the filter — 2026-09-16, filter keeps working
 - [x] Works in a narrow window and across different YouTube layout variants — 2026-09-16, narrow window holds up; a second layout variant was not separately exercised
 
 ## Cleanup
-- [ ] After the extension is removed, no leftover styles or attributes remain on YouTube — **not walked**, needs an uninstall; carried into Phase 7
+- [ ] After the extension is removed, no leftover styles or attributes remain on YouTube — **not walked**, needs an uninstall. Deferred, and expected to fail (see below)
 - [x] No `console.debug` output in the production build — 2026-09-16, `npm run build:prod` then grep: only one `console.error` and one `console.warn` per bundle
+
+## Security (after Phase 7)
+- [x] `npm run build:prod` ends with `audit: production bundle clean (spec §7)` — 2026-10-02
+- [x] A planted off-allowlist URL fails the production build and no zip is written — 2026-10-02, exit 1
+- [ ] DevTools → Network on a YouTube tab during a popup Refresh: every request the extension makes goes to `www.youtube.com` — **not walked**
+- [ ] The production build (`npm run build:prod`) loads unpacked with no console errors — **not walked**
+
+## Deferred manual checks
+
+Open items that no pass has walked yet, kept in one place so they do not get lost
+among the ticked ones.
+
+| Check | Why it is still open |
+|---|---|
+| First open shows the explainer line and the unexposed frames | Not specifically checked on 2026-09-16; the tick was retracted |
+| Signed out: nothing hidden, no errors | Needs a second browser profile |
+| No leftover styles or attributes after removing the extension (NFR-07) | Needs an uninstall. **Expected to fail:** reading `src/content/main.ts`, nothing reacts when the extension is removed, so an open tab keeps the stylesheet and the hidden marks until it reloads. See BACKLOG |
+| A second YouTube layout variant | Only one variant has been exercised live |
+| NFR-01 batch timing in real Chrome | Only the jsdom figures exist (see Performance) |
+| Network panel shows youtube.com only during a sync | Phase 7; the bundle audit covers literal URLs, this covers runtime |
+| The production build loads with no console errors | Phase 7 |
 
 ## Performance (NFR-01)
 
