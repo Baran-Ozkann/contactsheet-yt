@@ -69,7 +69,7 @@ export default tseslint.config(
     languageOptions: { globals: { ...globals.node } },
   },
   {
-    files: ['build.mjs'],
+    files: ['build.mjs', 'scripts/**/*.mjs'],
     languageOptions: { globals: { ...globals.node } },
   },
   {
