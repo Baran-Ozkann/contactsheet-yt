@@ -6,7 +6,7 @@ import {
   type PlaylistSetting,
   type Settings,
 } from './types.js';
-import { MAX_TITLE_LENGTH } from './schema.js';
+import { MAX_TITLE_LENGTH, safeJsonParse } from './schema.js';
 import { log } from './logger.js';
 
 const KEY = 'settings';
@@ -101,14 +101,12 @@ export function exportSettings(settings: Settings): string {
  * Parses an exported file. Anything unrecognised degrades to defaults rather
  * than throwing, and a file that is not an object at all is rejected outright
  * so an accidental import cannot silently wipe settings.
+ *
+ * A chosen file is still incoming JSON, so it gets the same size and depth
+ * limits as a YouTube response (spec §7 rule 7).
  */
 export function importSettings(text: string): Settings | null {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(text);
-  } catch {
-    return null;
-  }
+  const parsed = safeJsonParse(text);
   if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return null;
   // An index smuggled into the file is dropped here: coerceSettings only ever
   // copies the fields it knows about.

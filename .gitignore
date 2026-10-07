@@ -2,8 +2,7 @@ node_modules/
 dist/
 dist-zip/
 *.local.json
-.env
-.env.*
+.env*
 fixtures/raw/
 docs/spike/*-output.txt
 .DS_Store

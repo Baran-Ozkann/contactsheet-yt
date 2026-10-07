@@ -14,6 +14,7 @@ import { promisify } from 'node:util';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import { auditSource } from './scripts/audit-bundle.mjs';
 
 const exec = promisify(execFile);
 // fileURLToPath, not new URL(...).pathname: on Windows the latter yields
@@ -79,7 +80,33 @@ async function run() {
     process.exitCode = 1;
   }
 
+  if (prod && !(await auditDist())) {
+    process.exitCode = 1;
+    return; // never zip an artifact that failed the audit
+  }
+
   if (wantZip) await zip();
+}
+
+const TEXT_FILE = /\.(js|css|html|json)$/;
+
+/** Spec §7, checked against the files that actually ship. */
+async function auditDist(dir = dist) {
+  let clean = true;
+  for (const entry of await readdir(dir, { withFileTypes: true })) {
+    const p = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      if (!(await auditDist(p))) clean = false;
+      continue;
+    }
+    if (!TEXT_FILE.test(entry.name)) continue;
+    for (const finding of auditSource(await readFile(p, 'utf8'))) {
+      console.error(`${path.relative(root, p)}: ${finding.rule} ${finding.what}: ${finding.match}`);
+      clean = false;
+    }
+  }
+  if (dir === dist && clean) console.log('audit: production bundle clean (spec §7)');
+  return clean;
 }
 
 /** NFR-06, measured against what ships. */

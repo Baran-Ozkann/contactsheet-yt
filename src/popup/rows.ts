@@ -1,6 +1,7 @@
 import { buildCross } from './cross.js';
 import { perforate } from './sprocket.js';
 import type { PlaylistView } from '../core/messaging.js';
+import { CONFIRM_NO, CONFIRM_YES, REMOVE, ROW } from './selectors.js';
 
 /**
  * Building the strip's frames.
@@ -182,19 +183,19 @@ export type StripAction =
 export function classifyClick(target: Element | null): StripAction {
   if (!target) return null;
 
-  const remove = target.closest<HTMLElement>('.remove');
+  const remove = target.closest<HTMLElement>(REMOVE);
   if (remove?.dataset.playlistId) {
     return { kind: 'open-confirm', playlistId: remove.dataset.playlistId };
   }
 
-  const confirmed = target.closest<HTMLElement>('.confirm-yes');
+  const confirmed = target.closest<HTMLElement>(CONFIRM_YES);
   if (confirmed?.dataset.playlistId) {
     return { kind: 'remove', playlistId: confirmed.dataset.playlistId };
   }
 
-  if (target.closest('.confirm-no')) return { kind: 'cancel' };
+  if (target.closest(CONFIRM_NO)) return { kind: 'cancel' };
 
-  const row = target.closest<HTMLElement>('.row');
+  const row = target.closest<HTMLElement>(ROW);
   if (row?.dataset.playlistId) return { kind: 'toggle', playlistId: row.dataset.playlistId };
 
   return null;

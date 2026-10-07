@@ -24,6 +24,15 @@ yet, tracked here so they stay visible.
   forbidden (§6.3 and §7 rule 1), so they must be vendored locally. Budget
   roughly 30–50 KB subset against the 300 KB NFR-06 ceiling.
 - **A popup screenshot in `docs/`** (spec §9, Phase 5 acceptance).
+- **`docs/ARCHITECTURE.md`** (spec §2.4 directory layout). Nothing links to it
+  yet, so no link is broken, but the spec lists it and it does not exist.
+- **Automatic discovery is not wired up** (FR-01, spec §4.1).
+  `discoverPlaylists` exists in `src/content/innertube.ts` but nothing calls it,
+  and the router has no `playlists:discover` case, so the bundler drops it. The
+  popup lists only playlists added by URL or through the WL/LL shortcuts. Its
+  renderer shapes are inferred, not measured, so wiring it needs a spike
+  against a real library page first. Noticed 2026-10-02, during the Phase 7
+  audit.
 
 ## Noticed, not built
 
@@ -63,3 +72,11 @@ they are not rediscovered from scratch.
   probe's status, and which branch of `indexPlaylist` returns, from a real
   sync — rather than reasoning from shapes. Two attempts have now been argued
   from theory and neither landed.
+
+- **Removing the extension leaves its marks in open tabs** (NFR-07). Nothing
+  in `src/content/main.ts` reacts to the extension context going away, so a
+  tab that is open at uninstall keeps the `cs-style` element and every
+  `data-cs-hidden` card hidden until it reloads. `unhideAll` already does the
+  cleanup; what is missing is the trigger. The QA removal check has never been
+  walked and is expected to fail on this. Noticed 2026-10-02, by reading the
+  code during the Phase 7 audit.

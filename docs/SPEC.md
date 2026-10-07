@@ -109,7 +109,7 @@ Rationale: the user's session cookies are sent automatically on same-origin requ
 | `Messaging` | `src/core/messaging.ts` | Typed message contract, `type` allow-list, timeouts. |
 | `Innertube` | `src/content/innertube.ts` | YouTube data access (see §4). Turns raw data into validated DTOs. |
 | `PlaylistIndexer` | `src/content/indexer.ts` | Continuation loop, backoff, cancellation, progress reporting. |
-| `SelectorRegistry` | `src/content/selectors.ts` | **All** CSS selectors live here; no selector string exists in any other file. |
+| `SelectorRegistry` | `src/content/selectors.ts` | **All** CSS selectors for YouTube's page live here; the popup's own live in `src/popup/selectors.ts`. No selector string exists in any other file. |
 | `DomScanner` | `src/content/scanner.ts` | MutationObserver, batch queue, card→ID extraction. |
 | `Hider` | `src/content/hider.ts` | Attribute marking; never removes a node from the DOM. |
 | `Bridge` | `src/content/bridge.ts` | (Only on the §4-C path) the MAIN world bridge. |
@@ -537,7 +537,7 @@ Each phase is **its own branch and its own PR**. At the end of a phase the agent
 3. **No scope creep.** A feature not in this file may be proposed, but it goes into `docs/BACKLOG.md` and does not get implemented.
 4. **No new dependencies.** If a new package is needed (dev included), ask for approval first, with the justification.
 5. **No new permissions.** Changing `permissions`/`host_permissions` in `manifest.json` requires explicit approval.
-6. **Selectors in one file.** Do not write a CSS selector string outside `selectors.ts`.
+6. **Selectors in one file per surface.** Do not write a CSS selector string outside `src/content/selectors.ts` (YouTube's page) or `src/popup/selectors.ts` (the popup).
 7. **Every architectural decision becomes an ADR.** `docs/adr/NNNN-title.md` — context, options, decision, consequences. At minimum: toolchain choice, playlist access path, storage schema, hiding method, sync scheduling.
 8. **Commit discipline.** Conventional Commits (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`). Small, focused commits. One PR per phase.
 9. **Tests first, or alongside.** If you write a parser or a validator, its test ships in the same commit.

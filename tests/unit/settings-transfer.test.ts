@@ -6,6 +6,7 @@ import {
   settingsFilename,
 } from '../../src/core/settings.js';
 import { DEFAULT_SETTINGS, defaultSettings } from '../../src/core/types.js';
+import { MAX_JSON_BYTES, MAX_PARSE_DEPTH } from '../../src/core/schema.js';
 
 const sample = {
   ...defaultSettings(),
@@ -58,6 +59,16 @@ describe('importSettings', () => {
     for (const text of ['', 'null', '[]', '"a string"', '42', '{', 'not json']) {
       expect(importSettings(text)).toBeNull();
     }
+  });
+
+  it('applies the spec §7 size limit to an imported file', () => {
+    const padding = ' '.repeat(MAX_JSON_BYTES);
+    expect(importSettings(`{"enabled":false}${padding}`)).toBeNull();
+  });
+
+  it('applies the spec §7 depth limit to an imported file', () => {
+    const deep = `${'{"a":'.repeat(MAX_PARSE_DEPTH + 1)}1${'}'.repeat(MAX_PARSE_DEPTH + 1)}`;
+    expect(importSettings(`{"enabled":false,"x":${deep}}`)).toBeNull();
   });
 
   it('drops an index smuggled into the file', () => {

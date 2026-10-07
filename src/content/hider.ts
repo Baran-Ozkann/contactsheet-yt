@@ -1,4 +1,4 @@
-import { DEBUG_ATTR, HIDDEN_ATTR, SEEN_ATTR } from './selectors.js';
+import { DEBUG_ATTR, HIDDEN_ATTR, HIDDEN_MARKED, SEEN_ATTR, SEEN_MARKED } from './selectors.js';
 
 /**
  * Hiding is attribute marking and nothing else (spec §5.1).
@@ -46,7 +46,7 @@ export function unhide(el: Element): void {
  * that disabling or removing the extension leaves no trace (NFR-07).
  */
 export function unhideAll(root: ParentNode = document): number {
-  const marked = root.querySelectorAll(`[${HIDDEN_ATTR}]`);
+  const marked = root.querySelectorAll(HIDDEN_MARKED);
   for (const el of marked) unhide(el);
   return marked.length;
 }
@@ -57,5 +57,5 @@ export function unhideAll(root: ParentNode = document): number {
  * settings must be judged again, not skipped.
  */
 export function clearSeen(root: ParentNode = document): void {
-  for (const el of root.querySelectorAll(`[${SEEN_ATTR}]`)) el.removeAttribute(SEEN_ATTR);
+  for (const el of root.querySelectorAll(SEEN_MARKED)) el.removeAttribute(SEEN_ATTR);
 }
