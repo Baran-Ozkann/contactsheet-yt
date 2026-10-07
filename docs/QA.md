@@ -75,10 +75,23 @@ among the ticked ones.
 
 ## Performance (NFR-01)
 
-Run `npm run test:perf`. It sweeps a 300-card grid against a 20,000-id index —
-the NFR-03 ceiling — and reports each batch through `performance.measure`.
+**The 8 ms figure is a Chrome measurement and only a manual pass can produce
+it.** It is owed; see Deferred manual checks.
 
-Measured 2026-09-14, jsdom 30.0.1, Node 20:
+What CI checks instead is the shape of the cost. `npm run test:perf` sweeps
+100, 200 and 400 cards against a 20,000-id index (the NFR-03 ceiling) and
+asserts that per-card cost at 400 is under 2× the cost at 100. A linear scan
+sits near 1×; one that re-walks the grid per card lands near 4× and fails.
+That a batch stops once the budget is spent is proven separately, against a
+fake clock, in `scanner-budget.test.ts`. The test prints its jsdom milliseconds
+but does not assert on them: up to 2026-10-07 it did, and a slow CI runner
+failed it.
+
+2026-10-07, jsdom 30.0.1, Node 24: per-card cost ratio 0.82–1.06 across six
+runs; a planted per-card grid walk gave 3.36 and 3.84 and failed as intended.
+
+The earlier wall-clock figures, kept for the record (2026-09-14, jsdom 30.0.1,
+Node 20, 300 cards):
 
 | Case | Batches | Nodes per batch | Max batch | Worst `performance.measure` | Whole sweep |
 |---|---|---|---|---|---|
@@ -92,11 +105,8 @@ deferred to the next frame. No batch approaches the 50 ms long-task threshold.
 **These are pessimistic figures.** jsdom's `querySelector` and attribute writes
 are far slower than Blink's — the DOM-free half of the work (URL parsing plus
 the two `Set.has` lookups) measures ~4 µs per card, so jsdom's DOM operations
-dominate by roughly 25×. Chrome should be comfortably faster. The real-browser
-number still has to come from a manual pass on the live homepage.
-
-**As of 2026-09-16 that number is still owed.** The 2026-09-16 pass did not take one,
-so the jsdom figures above stand with their caveat.
+dominate by roughly 25×. Chrome should be comfortably faster, but that is an
+expectation, not a measurement.
 
 ## Notes from the 2026-09-16 pass
 
