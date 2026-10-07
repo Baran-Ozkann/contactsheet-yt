@@ -109,9 +109,11 @@ Run 2026-10-02.
   Fixed by a lockfile-only bump to 5.0.12, inside minimatch's declared range
   (`cd08f06`). **After: 0 vulnerabilities.**
 - **Install scripts:** `esbuild` (`postinstall: node install.js`, which
-  verifies the platform binary) and `fsevents` (optional, macOS only). npm
-  reports that esbuild's script is not yet covered by an `allowScripts`
-  policy. That decision is open.
+  verifies the platform binary) and `fsevents` (optional, macOS only).
+  esbuild's script is approved in `package.json` under `allowScripts`, pinned
+  to `esbuild@0.28.2`: the build cannot run without its binary, and the
+  version is exact and integrity-hashed in the lockfile. A version bump drops
+  out of the approval and npm warns again, which is the point.
 - **CI:** `actions/checkout` and `actions/setup-node` are pinned by commit
   SHA, the token is `contents: read`, and checkout does not persist
   credentials.

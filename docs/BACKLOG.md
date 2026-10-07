@@ -80,8 +80,3 @@ they are not rediscovered from scratch.
   cleanup; what is missing is the trigger. The QA removal check has never been
   walked and is expected to fail on this. Noticed 2026-10-02, by reading the
   code during the Phase 7 audit.
-
-- **esbuild's install script has no `allowScripts` decision.** npm now warns
-  that `esbuild@0.28.2 (postinstall: node install.js)` is not covered by an
-  `allowScripts` policy. Approving it is a supply-chain decision that changes
-  `package.json`, so it waits for the owner. Noticed 2026-10-02.
