@@ -36,7 +36,7 @@ These are not preferences, they are a contract. Breaking one means the phase is 
 2. **No new permissions.** Going beyond `storage`, `alarms` and `https://www.youtube.com/*` requires explicit approval. `tabs`, `cookies`, `webRequest` and `<all_urls>` are never requested.
 3. **No new dependencies.** Even a dev dependency has to be proposed with its justification first. `dependencies` stays empty.
 4. **No `innerHTML` / `outerHTML` / `insertAdjacentHTML` / `eval` / `new Function`.** Lint already fails on these; do not try to work around it.
-5. **CSS selector strings live only in `src/content/selectors.ts`.** If you see a selector in any other file, move it.
+5. **CSS selector strings live only in a `selectors.ts`:** `src/content/selectors.ts` for YouTube's page, `src/popup/selectors.ts` for the popup's own markup. If you see a selector in any other file, move it.
 6. **No requests outside youtube.com.** Analytics, error reporting, update checks, font CDNs — none of them.
 7. **No endpoint that writes to the YouTube account is ever called.** Reads only.
 8. **Cookies are never read.** ADR-0002 measured that the signature is unnecessary. `document.cookie` access and `SAPISIDHASH` computation do not enter the codebase.

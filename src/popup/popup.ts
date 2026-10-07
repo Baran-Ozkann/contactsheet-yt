@@ -6,6 +6,7 @@ import { exportSettings, importSettings, settingsFilename } from '../core/settin
 import { MAX_JSON_BYTES } from '../core/schema.js';
 import type { Message, PopupState } from '../core/messaging.js';
 import type { PlaylistId } from '../core/types.js';
+import { CONFIRM, CONFIRM_NO, FRAME, I18N_ARIA, I18N_TEXT, OPEN_FRAME, REMOVE, removeFor, rowFor } from './selectors.js';
 
 /**
  * The contact-sheet interface (spec §6).
@@ -82,11 +83,11 @@ function localize(): void {
   const lang = chrome.i18n.getUILanguage();
   document.documentElement.lang = lang;
   numberFormat = new Intl.NumberFormat(lang);
-  for (const node of document.querySelectorAll<HTMLElement>('[data-i18n]')) {
+  for (const node of document.querySelectorAll<HTMLElement>(I18N_TEXT)) {
     const key = node.dataset.i18n;
     if (key) node.textContent = t(key);
   }
-  for (const node of document.querySelectorAll<HTMLElement>('[data-i18n-aria]')) {
+  for (const node of document.querySelectorAll<HTMLElement>(I18N_ARIA)) {
     const key = node.dataset.i18nAria;
     if (key) node.setAttribute('aria-label', t(key));
   }
@@ -176,9 +177,7 @@ async function load(): Promise<void> {
 // ---- actions ----------------------------------------------------------------
 
 async function toggleRow(playlistId: string): Promise<void> {
-  const row = nodes.rows.querySelector<HTMLElement>(
-    `.row[data-playlist-id="${CSS.escape(playlistId)}"]`,
-  );
+  const row = nodes.rows.querySelector<HTMLElement>(rowFor(playlistId));
   if (!row) return;
   const next = row.getAttribute('aria-checked') !== 'true';
   // Flip immediately so the cross animates from the click, not from the
@@ -195,9 +194,7 @@ async function toggleRow(playlistId: string): Promise<void> {
  */
 function openConfirm(playlistId: string): void {
   closeConfirm();
-  const frame = nodes.rows
-    .querySelector(`.remove[data-playlist-id="${CSS.escape(playlistId)}"]`)
-    ?.closest<HTMLElement>('.frame');
+  const frame = nodes.rows.querySelector(removeFor(playlistId))?.closest<HTMLElement>(FRAME);
   const view = lastState?.playlists.find((p) => p.id === playlistId);
   if (!frame || !view) return;
 
@@ -205,17 +202,17 @@ function openConfirm(playlistId: string): void {
   const panel = buildConfirm(view, rowContext);
   frame.append(panel);
   // Focus lands on Cancel, not Remove: the safe option is the default one.
-  panel.querySelector<HTMLButtonElement>('.confirm-no')?.focus();
+  panel.querySelector<HTMLButtonElement>(CONFIRM_NO)?.focus();
   announce(t('popupRemoveConfirm', view.title));
 }
 
 /** Closes the open confirmation, optionally returning focus to what opened it. */
 function closeConfirm(restoreFocus = false): void {
-  const frame = nodes.rows.querySelector<HTMLElement>('.frame.is-confirming');
+  const frame = nodes.rows.querySelector<HTMLElement>(OPEN_FRAME);
   if (!frame) return;
   frame.classList.remove('is-confirming');
-  frame.querySelector('.confirm')?.remove();
-  if (restoreFocus) frame.querySelector<HTMLButtonElement>('.remove')?.focus();
+  frame.querySelector(CONFIRM)?.remove();
+  if (restoreFocus) frame.querySelector<HTMLButtonElement>(REMOVE)?.focus();
 }
 
 async function removePlaylist(playlistId: string): Promise<void> {
@@ -386,7 +383,7 @@ function start(): void {
 
   // Escape backs out of the confirmation, which is what a dialog would do.
   nodes.rows.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && nodes.rows.querySelector('.frame.is-confirming')) {
+    if (event.key === 'Escape' && nodes.rows.querySelector(OPEN_FRAME)) {
       event.preventDefault();
       closeConfirm(true);
     }
